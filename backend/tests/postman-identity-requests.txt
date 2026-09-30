@@ -1,0 +1,228 @@
+iSIWES IDENTITY API - POSTMAN TEST DATA
+========================================
+
+BEFORE YOU START
+----------------
+1. Start MongoDB and configure backend/.env with MONGODB_URI.
+2. From backend/, start the API with: npm run dev
+3. Create a Postman environment with these variables:
+
+   baseUrl       http://localhost:3000/api/v1
+   studentToken
+   organizationToken
+   resetToken
+
+4. Use Body > raw > JSON for each request below. Postman will set
+   Content-Type: application/json.
+5. Password recovery returns resetToken in development only when SMTP is
+  not configured. When SMTP is configured, the reset link is sent by email.
+  The link contains a token that expires after 10 minutes.
+
+Use baseUrl exactly as shown above; the auth routes are mounted under
+/api/v1/auth. Restart the backend after route changes.
+
+Run the requests in order. Registration emails must be unique in the database;
+change the example email addresses if you have already used them.
+
+
+0. HEALTH CHECK
+---------------
+GET {{baseUrl}}/health
+
+Expected: 200 OK
+
+
+1. REGISTER A STUDENT
+---------------------
+POST {{baseUrl}}/auth/register
+
+{
+  "email": "ada.okafor@example.test",
+  "password": "Student-Training-2026!",
+  "confirmPassword": "Student-Training-2026!",
+  "role": "student",
+  "student": {
+    "fullName": "Ada Okafor",
+    "phoneNumber": "+2348012345678",
+    "institution": "University of Lagos",
+    "department": "Computer Science",
+    "fieldOfStudy": "Software Engineering",
+    "currentLevel": "400",
+    "expectedDurationWeeks": 24,
+    "preferredLocations": ["Lagos", "Remote"],
+    "skills": ["TypeScript", "Node.js", "MongoDB"]
+  }
+}
+
+Expected: 201 Created with user and accessToken.
+Optional Postman Scripts > Post-response snippet:
+
+pm.environment.set("studentToken", pm.response.json().accessToken);
+
+LOGIN AS A STUDENT
+------------------
+POST {{baseUrl}}/auth/login
+
+{
+  "email": "ada.okafor@example.test",
+  "password": "Student-Training-2026!"
+}
+
+Expected: 200 OK with the student account and a new accessToken. Login uses
+the same endpoint for student, organization representative, and administrator
+accounts. Save the returned token:
+
+pm.environment.set("studentToken", pm.response.json().accessToken);
+
+
+2. GET THE STUDENT ACCOUNT AND PROFILE
+--------------------------------------
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{studentToken}}
+
+Expected: 200 OK. The response contains user and student objects.
+
+
+3. UPDATE THE STUDENT PROFILE
+-----------------------------
+PATCH {{baseUrl}}/auth/student-profile
+Authorization: Bearer {{studentToken}}
+
+{
+  "currentLevel": "SIWES",
+  "preferredLocations": ["Lagos", "Abuja", "Remote"],
+  "skills": ["TypeScript", "Node.js", "MongoDB", "REST APIs"]
+}
+
+Expected: 200 OK with the updated student profile.
+
+
+4. REGISTER AN ORGANIZATION REPRESENTATIVE
+------------------------------------------
+POST {{baseUrl}}/auth/register
+
+{
+  "email": "hr@brightfuture.example.test",
+  "password": "Organization-Training-2026!",
+  "confirmPassword": "Organization-Training-2026!",
+  "role": "organization_representative"
+}
+
+Expected: 201 Created. Organization profile creation is handled separately
+from identity registration.
+
+
+5. LOGIN AS THE ORGANIZATION REPRESENTATIVE
+--------------------------------------------
+POST {{baseUrl}}/auth/login
+
+{
+  "email": "hr@brightfuture.example.test",
+  "password": "Organization-Training-2026!"
+}
+
+Expected: 200 OK with a new accessToken.
+Optional Postman Scripts > Post-response snippet:
+
+pm.environment.set("organizationToken", pm.response.json().accessToken);
+
+
+6. CHECK ROLE-BASED ACCESS
+--------------------------
+PATCH {{baseUrl}}/auth/student-profile
+Authorization: Bearer {{organizationToken}}
+
+{
+  "institution": "This should not be saved"
+}
+
+Expected: 403 Forbidden with error code ROLE_FORBIDDEN.
+
+
+7. REQUEST PASSWORD RECOVERY
+----------------------------
+POST {{baseUrl}}/auth/password/forgot
+
+{
+  "email": "ada.okafor@example.test"
+}
+
+Expected: 202 Accepted with a generic message. In development without SMTP,
+the response also contains resetToken. Save it to the Postman environment:
+
+pm.environment.set("resetToken", pm.response.json().resetToken);
+
+When SMTP is configured, copy the token from the reset link in the email. The
+token appears in this URL form and is valid for 10 minutes. Use the token in
+the POST request below and provide the new password in the JSON body:
+
+POST {{baseUrl}}/auth/password/reset/:token
+
+Replace :token with the token from the link, or save that token as the
+resetToken Postman environment variable. Requesting another reset invalidates
+any earlier reset token for the account.
+The email URL is a POST API endpoint; opening it directly in a browser sends a
+GET request and will not reset the password.
+
+
+8. RESET THE STUDENT PASSWORD
+----------------------------
+POST {{baseUrl}}/auth/password/reset/{{resetToken}}
+
+{
+  "password": "Student-Training-2027!",
+  "confirmPassword": "Student-Training-2027!"
+}
+
+Expected: 204 No Content. Password and confirmPassword must match. Mismatches
+return 400 with error code VALIDATION_ERROR. The token is single-use; expired,
+invalid, or already used tokens return 400 with error code INVALID_RESET_TOKEN.
+Existing sessions for this account are revoked.
+
+
+9. LOGIN WITH THE NEW PASSWORD
+------------------------------
+POST {{baseUrl}}/auth/login
+
+{
+  "email": "ada.okafor@example.test",
+  "password": "Student-Training-2027!"
+}
+
+Expected: 200 OK. Save the returned token as studentToken again.
+
+
+10. CHANGE PASSWORD WHILE AUTHENTICATED
+---------------------------------------
+PUT {{baseUrl}}/auth/password
+Authorization: Bearer {{studentToken}}
+
+{
+  "currentPassword": "Student-Training-2027!",
+  "newPassword": "Student-Training-2028!"
+}
+
+Expected: 204 No Content. All current sessions are revoked; log in again with
+the new password before making another authenticated request.
+
+
+11. LOGOUT
+----------
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{studentToken}}
+
+Expected: 204 No Content. Reusing this token on GET /auth/me should return
+401 Unauthorized.
+
+
+VALIDATION CHECKS
+-----------------
+Try these separately; each should return 400 with error code VALIDATION_ERROR:
+
+- Register with role "administrator" (public administrator registration is
+  disabled).
+- Register a student without the student object.
+- Request password recovery with an invalid email address.
+- Submit an empty student-profile update.
+
+Use disposable test accounts and do not use real student personal data here.
