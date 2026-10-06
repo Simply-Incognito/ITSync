@@ -101,26 +101,26 @@ organizationRouter.post(
   },
 );
 
-organizationRouter.get(
-  '/me',
-  requireAuthentication,
-  requireRoles('organization_representative'),
-  async (request, response) => {
-    response.json(await getMyOrganization(requireIdentity(request).id));
-  },
-);
+organizationRouter
+  .route('/me')
+  .get(
+    requireAuthentication,
+    requireRoles('organization_representative'),
+    async (request, response) => {
+      response.json(await getMyOrganization(requireIdentity(request).id));
+    },
+  )
+  .patch(
+    requireAuthentication,
+    requireRoles('organization_representative'),
+    async (request, response) => {
+      const input = organizationProfileUpdateSchema.parse(request.body);
+      const organization = await updateMyOrganizationProfile(requireIdentity(request).id, input);
+      response.json({ organization });
+    },
+  );
 
-organizationRouter.patch(
-  '/me',
-  requireAuthentication,
-  requireRoles('organization_representative'),
-  async (request, response) => {
-    const input = organizationProfileUpdateSchema.parse(request.body);
-    const organization = await updateMyOrganizationProfile(requireIdentity(request).id, input);
-    response.json({ organization });
-  },
-);
-
+/*
 organizationRouter.post(
   '/me/documents',
   requireAuthentication,
@@ -147,6 +147,8 @@ organizationRouter.post(
     });
   },
 );
+
+*/
 
 organizationRouter.get(
   '/me/documents/:documentId',
