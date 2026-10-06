@@ -15,7 +15,7 @@ Draft -> Pending Review -> Published -> Closed
 
 Only representatives of currently verified organizations can create or manage opportunities. Representatives can edit draft or rejected opportunities, submit them for review, and close published opportunities. Administrators can approve or reject pending opportunities and suspend published opportunities. State transitions and immutable moderation events are committed in MongoDB transactions.
 
-Public listing and detail endpoints expose only published opportunities with future application deadlines and currently verified organizations. Opportunity routes do not implement discovery filters or applications; those belong to later phases.
+Public listing and detail endpoints expose only published opportunities with future application deadlines and currently verified organizations. The discovery endpoint supports search by title, description, or field of study, and filtering by field of study, industry, location, duration, and work arrangement. Results are paginated.
 
 ## API
 
@@ -25,7 +25,8 @@ Public listing and detail endpoints expose only published opportunities with fut
 - `PATCH /api/v1/opportunities/me/:opportunityId` updates a draft or rejected opportunity.
 - `POST /api/v1/opportunities/me/:opportunityId/submit` submits a draft or rejected opportunity for review.
 - `POST /api/v1/opportunities/me/:opportunityId/close` closes a published opportunity.
-- `GET /api/v1/opportunities` lists currently available published opportunities.
+- `GET /api/v1/opportunities` searches and filters published opportunities with pagination.
+- `GET /api/v1/opportunities/filters` returns available filter options.
 - `GET /api/v1/opportunities/:opportunityId` returns an available published opportunity.
 - `GET /api/v1/opportunities/admin/opportunities` lists pending opportunities; administrators may filter by status.
 - `GET /api/v1/opportunities/admin/opportunities/:opportunityId` returns the opportunity and moderation history.

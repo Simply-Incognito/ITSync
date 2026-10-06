@@ -271,10 +271,30 @@ export const openApiDocument = {
     },
     '/opportunities': {
       get: {
-        summary: 'List published opportunities that are still accepting applications',
+        summary: 'Search and filter published opportunities',
+        tags: ['Opportunities'],
+        parameters: [
+          { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'fieldOfStudy', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'industry', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'location', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'durationWeeks', in: 'query', required: false, schema: { type: 'integer' } },
+          { name: 'workArrangement', in: 'query', required: false, schema: { type: 'string', enum: ['onsite', 'hybrid', 'remote'] } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 20 } },
+        ],
+        responses: {
+          '200': { description: 'Paginated opportunities matching the search criteria.' },
+          '400': { description: 'Invalid search parameters.' },
+        },
+      },
+    },
+    '/opportunities/filters': {
+      get: {
+        summary: 'Get available filter options for opportunity search',
         tags: ['Opportunities'],
         responses: {
-          '200': { description: 'Published opportunities with organization details.' },
+          '200': { description: 'Available filter options.' },
         },
       },
     },
