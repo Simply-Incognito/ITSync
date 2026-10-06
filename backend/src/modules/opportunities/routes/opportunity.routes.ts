@@ -18,11 +18,13 @@ import {
   suspendOpportunity,
   updateMyOpportunity,
 } from '../services/opportunity.service.js';
+import { getOpportunityFilters, searchOpportunities } from '../services/opportunity-discovery.service.js';
 import {
   opportunityCreateSchema,
   opportunityReasonSchema,
   opportunityUpdateSchema,
 } from '../validations/opportunity.validation.js';
+import { opportunitySearchSchema } from '../validations/opportunity-discovery.validation.js';
 
 export const opportunityRouter = Router();
 
@@ -195,8 +197,15 @@ opportunityRouter.post(
   },
 );
 
-opportunityRouter.get('/', async (_request, response) => {
-  response.json({ opportunities: await listPublishedOpportunities() });
+opportunityRouter.get('/', async (request, response) => {
+  const filters = opportunitySearchSchema.parse(request.query);
+  const result = await searchOpportunities(filters);
+  response.json(result);
+});
+
+opportunityRouter.get('/filters', async (_request, response) => {
+  const filters = await getOpportunityFilters();
+  response.json({ filters });
 });
 
 opportunityRouter.get('/:opportunityId', async (request, response) => {
