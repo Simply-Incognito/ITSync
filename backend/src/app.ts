@@ -10,6 +10,8 @@ import { notFoundHandler } from './middleware/not-found.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { authRouter } from './modules/identity/routes/auth.routes.js';
 import { organizationRouter } from './modules/organizations/routes/organization.routes.js';
+import { applicationTrackingRouter } from './modules/application-tracking/routes/application-tracking.routes.js';
+import { documentRouter } from './modules/documents/routes/document.routes.js';
 
 export function createApp() {
   const app = express();
@@ -50,6 +52,8 @@ export function createApp() {
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/organizations', organizationRouter);
+  app.use('/api/v1/application-tracking', applicationTrackingRouter);
+  app.use('/api/v1/documents', documentRouter);
 
   app.use(notFoundHandler);
 

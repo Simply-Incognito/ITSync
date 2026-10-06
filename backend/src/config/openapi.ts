@@ -93,6 +93,62 @@ export const openApiDocument = {
         },
       },
     },
+    '/application-tracking/me': {
+      get: {
+        summary: 'Get the authenticated student\'s application dashboard',
+        tags: ['ApplicationTracking'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Student application dashboard.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+        },
+      },
+    },
+    '/application-tracking/organization/me': {
+      get: {
+        summary: 'Get the authenticated organization representative\'s application dashboard',
+        tags: ['ApplicationTracking'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Organization application dashboard.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Organization representative role required.' },
+        },
+      },
+    },
+    '/application-tracking/:applicationId': {
+      get: {
+        summary: 'Get application review details and audit history',
+        tags: ['ApplicationTracking'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Application review details.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Administrator role required.' },
+          '404': { description: 'Application not found.' },
+        },
+      },
+    },
+    '/application-tracking/:applicationId/history': {
+      get: {
+        summary: 'Get application status history',
+        tags: ['ApplicationTracking'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Application status history.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Administrator role required.' },
+          '404': { description: 'Application not found.' },
+        },
+      },
+    },
     '/auth/student-profile': {
       patch: {
         summary: 'Update the authenticated student profile',
@@ -266,6 +322,137 @@ export const openApiDocument = {
         responses: {
           '200': { description: 'Organization suspended and decision audited.' },
           '403': { description: 'Administrator role required.' },
+        },
+      },
+    },
+  },
+    '/documents/student/upload': {
+      post: {
+        summary: 'Upload a student document (CV, supporting files)',
+        tags: ['Documents'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['documentType', 'file'],
+                properties: {
+                  documentType: {
+                    type: 'string',
+                    enum: ['cv', 'other'],
+                  },
+                  file: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Document uploaded successfully.' },
+          '400': { description: 'Invalid document or verification state.' },
+          '413': { description: 'Document exceeds 5 MB.' },
+        },
+      },
+    },
+    '/documents/student/:documentId/download': {
+      get: {
+        summary: 'Download a student document',
+        tags: ['Documents'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Document file.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '404': { description: 'Document not found.' },
+        },
+      },
+    },
+    '/documents/student/:documentId': {
+      delete: {
+        summary: 'Delete a student document',
+        tags: ['Documents'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '204': { description: 'Document deleted.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '404': { description: 'Document not found.' },
+        },
+      },
+    },
+    '/documents/organization/upload': {
+      post: {
+        summary: 'Upload an organization verification document',
+        tags: ['Organizations'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['documentType', 'file'],
+                properties: {
+                  documentType: {
+                    type: 'string',
+                    enum: [
+                      'cac_certificate',
+                      'cac_status_report',
+                      'representative_authorization',
+                      'proof_of_address',
+                      'other',
+                    ],
+                  },
+                  file: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Document uploaded successfully.' },
+          '400': { description: 'Invalid document or verification state.' },
+          '413': { description: 'Document exceeds 5 MB.' },
+        },
+      },
+    },
+    '/documents/organization/:documentId/download': {
+      get: {
+        summary: 'Download an organization verification document',
+        tags: ['Organizations'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Document file.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Organization representative role required.' },
+          '404': { description: 'Document not found.' },
+        },
+      },
+    },
+    '/documents/organization/:documentId': {
+      delete: {
+        summary: 'Delete an organization verification document',
+        tags: ['Organizations'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '204': { description: 'Document deleted.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Organization representative role required.' },
+          '404': { description: 'Document not found.' },
         },
       },
     },
