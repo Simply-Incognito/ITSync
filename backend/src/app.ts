@@ -54,6 +54,7 @@ export function createApp() {
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/organizations', organizationRouter);
+  app.use('/api/v1/notifications', notificationRouter);
   app.use('/api/v1/application-tracking', applicationTrackingRouter);
   app.use('/api/v1/documents', documentRouter);
   app.use('/api/v1/applications', applicationRouter);

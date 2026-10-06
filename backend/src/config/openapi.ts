@@ -770,6 +770,61 @@ export const openApiDocument = {
       },
     },
   },
+    '/notifications': {
+      get: {
+        summary: 'Get the authenticated user\'s notifications',
+        tags: ['Notifications'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'recipientRole', in: 'query', required: false, schema: { type: 'string', enum: ['student', 'organization_representative', 'administrator'] } },
+          { name: 'read', in: 'query', required: false, schema: { type: 'boolean' } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 20 } },
+        ],
+        responses: {
+          '200': { description: 'User notifications with pagination.' },
+          '401': { description: 'Authentication required.' },
+        },
+      },
+    },
+    '/notifications/unread-count': {
+      get: {
+        summary: 'Get the count of unread notifications',
+        tags: ['Notifications'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Unread notification count.' },
+          '401': { description: 'Authentication required.' },
+        },
+      },
+    },
+    '/notifications/:notificationId/read': {
+      patch: {
+        summary: 'Mark a notification as read',
+        tags: ['Notifications'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'notificationId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Notification marked as read.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Role not authorized for this notification.' },
+        },
+      },
+    },
+    '/notifications/read-all': {
+      patch: {
+        summary: 'Mark all notifications as read',
+        tags: ['Notifications'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '204': { description: 'All notifications marked as read.' },
+          '401': { description: 'Authentication required.' },
+        },
+      },
+    },
+  },
   components: {
     securitySchemes: {
       bearerAuth: { type: 'http', scheme: 'bearer' },
