@@ -1,16 +1,27 @@
-iSIWES IDENTITY API - POSTMAN TEST DATA
-========================================
+iSIWES IDENTITY AND ORGANIZATION API - POSTMAN TEST DATA
+========================================================
 
 BEFORE YOU START
 ----------------
 1. Start MongoDB and configure backend/.env with MONGODB_URI.
+  Organization review decisions use MongoDB transactions, so MongoDB must be
+  configured as a replica set. MongoDB Atlas is already replica-set capable.
 2. From backend/, start the API with: npm run dev
 3. Create a Postman environment with these variables:
 
    baseUrl       http://localhost:3000/api/v1
    studentToken
-   organizationToken
+   organizationOneToken
+   organizationTwoToken
+   organizationOneId
+   organizationTwoId
+   adminEmail
+   adminPassword
+   adminToken
    resetToken
+
+   Keep adminEmail and adminPassword in a private Postman environment; do not
+   commit or share an environment export containing credentials.
 
 4. Use Body > raw > JSON for each request below. Postman will set
    Content-Type: application/json.
@@ -21,8 +32,8 @@ BEFORE YOU START
 Use baseUrl exactly as shown above; the auth routes are mounted under
 /api/v1/auth. Restart the backend after route changes.
 
-Run the requests in order. Registration emails must be unique in the database;
-change the example email addresses if you have already used them.
+Run the requests in order. Registration emails and organization registration
+numbers must be unique in the database; change the examples if already used.
 
 
 0. HEALTH CHECK
@@ -97,40 +108,220 @@ Authorization: Bearer {{studentToken}}
 Expected: 200 OK with the updated student profile.
 
 
-4. REGISTER AN ORGANIZATION REPRESENTATIVE
-------------------------------------------
+4. REGISTER TWO ORGANIZATION REPRESENTATIVES
+---------------------------------------------
 POST {{baseUrl}}/auth/register
 
 {
-  "email": "hr@brightfuture.example.test",
+  "email": "hr@northstar.example.test",
   "password": "Organization-Training-2026!",
   "confirmPassword": "Organization-Training-2026!",
   "role": "organization_representative"
 }
 
-Expected: 201 Created. Organization profile creation is handled separately
-from identity registration.
+Expected: 201 Created with user and accessToken. This creates the account
+only; an organization profile is created in a separate request. Save this
+token in Postman > Scripts > Post-response:
+
+pm.environment.set("organizationOneToken", pm.response.json().accessToken);
+
+Send the same request again for the second representative:
+
+{
+  "email": "hr@lakeside.example.test",
+  "password": "Lakeside-Training-2026!",
+  "confirmPassword": "Lakeside-Training-2026!",
+  "role": "organization_representative"
+}
+
+Save the second response token:
+
+pm.environment.set("organizationTwoToken", pm.response.json().accessToken);
+
+Each representative can manage only the organization profile tied to their
+account.
 
 
-5. LOGIN AS THE ORGANIZATION REPRESENTATIVE
---------------------------------------------
+5. CREATE BOTH ORGANIZATION PROFILES
+------------------------------------
+Create the first profile:
+
+POST {{baseUrl}}/organizations
+Authorization: Bearer {{organizationOneToken}}
+
+{
+  "legalName": "Northstar Digital Services Ltd",
+  "tradingName": "Northstar Digital",
+  "registrationCountry": "NG",
+  "registrationNumber": "RC-TEST-1001",
+  "industry": "Information Technology",
+  "description": "A software and digital services company offering supervised industrial training placements.",
+  "website": "https://northstar.example.test",
+  "representativeName": "Tomi Adeyemi",
+  "representativeTitle": "Human Resources Manager",
+  "address": {
+    "street": "12 Example Crescent",
+    "city": "Abuja",
+    "state": "FCT",
+    "country": "Nigeria",
+    "postalCode": "900001"
+  }
+}
+
+Expected: 201 Created with verificationStatus "draft". Save its ID:
+
+pm.environment.set("organizationOneId", pm.response.json().organization._id);
+
+Create the second profile:
+
+POST {{baseUrl}}/organizations
+Authorization: Bearer {{organizationTwoToken}}
+
+{
+  "legalName": "Lakeside Engineering Works Ltd",
+  "tradingName": "Lakeside Engineering",
+  "registrationCountry": "NG",
+  "registrationNumber": "RC-TEST-1002",
+  "industry": "Engineering",
+  "description": "An engineering services company providing supervised industrial training and technical mentorship.",
+  "website": "https://lakeside.example.test",
+  "representativeName": "Chika Nwosu",
+  "representativeTitle": "People Operations Lead",
+  "address": {
+    "street": "8 Sample Road",
+    "city": "Lagos",
+    "state": "Lagos",
+    "country": "Nigeria",
+    "postalCode": "100001"
+  }
+}
+
+Save its ID:
+
+pm.environment.set("organizationTwoId", pm.response.json().organization._id);
+
+The .test websites and RC-TEST numbers are placeholders, not CAC records.
+Use the organizations' actual details and unique registration numbers for a
+real review.
+
+
+6. UPLOAD REQUIRED EVIDENCE FOR EACH ORGANIZATION
+------------------------------------------------
+For each representative, send three requests to
+POST {{baseUrl}}/organizations/me/documents. Set Authorization to that
+representative's token. In Postman choose Body > form-data and add:
+
+documentType = cac_certificate
+file = [select CAC certificate PDF, JPEG, or PNG]
+
+Repeat with documentType = representative_authorization and the organization's
+proof that the representative is authorized to act for it. Repeat again with
+documentType = proof_of_address and acceptable business address evidence.
+Do all three uploads for organization one, then repeat them for organization
+two using organizationTwoToken and its documents.
+
+Expected: 201 Created with document metadata. Files are limited to 5 MB and
+must be PDF, JPEG, or PNG; file signatures are checked and the contents are
+stored privately. The API does not accept document contents as JSON.
+
+
+7. SUBMIT BOTH PROFILES FOR REVIEW
+----------------------------------
+Send this request once per representative, changing Authorization for the
+second organization:
+
+POST {{baseUrl}}/organizations/me/verification
+Authorization: Bearer {{organizationOneToken}}
+
+Expected: 200 OK with status "pending". Submission fails with
+VERIFICATION_DOCUMENTS_INCOMPLETE until all three required document categories
+are uploaded. Pending profiles are locked from edits. If an admin rejects a
+profile, correct allowed fields with PATCH /organizations/me, replace or add
+evidence, then submit it again.
+
+
+8. ADMIN REVIEWS AND APPROVES BOTH ORGANIZATIONS
+-----------------------------------------------
+An administrator account must already exist; public administrator
+registration is disabled. Log in using an account provisioned through your
+trusted admin setup process:
+
 POST {{baseUrl}}/auth/login
 
 {
-  "email": "hr@brightfuture.example.test",
-  "password": "Organization-Training-2026!"
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
 }
 
-Expected: 200 OK with a new accessToken.
-Optional Postman Scripts > Post-response snippet:
+Save the returned token:
 
-pm.environment.set("organizationToken", pm.response.json().accessToken);
+pm.environment.set("adminToken", pm.response.json().accessToken);
+
+List the pending review queue:
+
+GET {{baseUrl}}/organizations/admin/organizations
+Authorization: Bearer {{adminToken}}
+
+Review each profile and its document metadata:
+
+GET {{baseUrl}}/organizations/admin/organizations/{{organizationOneId}}
+Authorization: Bearer {{adminToken}}
+
+Repeat with {{organizationTwoId}}. Download a document using its document ID
+from the response:
+
+GET {{baseUrl}}/organizations/admin/organizations/{{organizationOneId}}/documents/{{documentId}}
+Authorization: Bearer {{adminToken}}
+
+Before approval, independently confirm each legal name and registration
+number against the authoritative registry, representative authority, contact
+details obtained independently of the application, and document authenticity.
+Do not approve the placeholder sample data as real registry evidence.
+
+Approve the first organization after completing those checks. Use the actual
+registry source and lookup reference:
+
+POST {{baseUrl}}/organizations/admin/organizations/{{organizationOneId}}/approve
+Authorization: Bearer {{adminToken}}
+
+{
+  "registrySource": "Corporate Affairs Commission public search",
+  "registryReference": "[actual CAC lookup or registration reference]",
+  "checks": {
+    "registryRecordFound": true,
+    "legalNameAndNumberMatch": true,
+    "representativeAuthorityConfirmed": true,
+    "independentlySourcedContactConfirmed": true,
+    "documentsAppearAuthentic": true
+  },
+  "note": "Verified against the official registry and independently sourced organization contact."
+}
+
+Repeat for {{organizationTwoId}} using that organization's actual review
+evidence. The API requires all five checks and records the reviewer and
+decision in the audit history. To reject or suspend instead, use the matching
+admin endpoint with JSON such as { "reason": "Explain the decision." }.
 
 
-6. CHECK ROLE-BASED ACCESS
---------------------------
+9. CONFIRM BOTH ORGANIZATIONS ARE VERIFIED
+------------------------------------------
+GET {{baseUrl}}/organizations/me
+Authorization: Bearer {{organizationOneToken}}
+
+Repeat with {{organizationTwoToken}}. Each should show verificationStatus
+"verified".
+
+The requireVerifiedOrganization middleware checks the current database status
+on each request, so pending, rejected, and suspended profiles are denied.
+Opportunity and application routes are not implemented in this backend yet;
+this flow completes organization verification but cannot create opportunities
+or applications.
+
+
+10. CHECK ROLE-BASED ACCESS
+---------------------------
 PATCH {{baseUrl}}/auth/student-profile
-Authorization: Bearer {{organizationToken}}
+Authorization: Bearer {{organizationOneToken}}
 
 {
   "institution": "This should not be saved"
@@ -139,7 +330,7 @@ Authorization: Bearer {{organizationToken}}
 Expected: 403 Forbidden with error code ROLE_FORBIDDEN.
 
 
-7. REQUEST PASSWORD RECOVERY
+11. REQUEST PASSWORD RECOVERY
 ----------------------------
 POST {{baseUrl}}/auth/password/forgot
 
@@ -165,7 +356,7 @@ The email URL is a POST API endpoint; opening it directly in a browser sends a
 GET request and will not reset the password.
 
 
-8. RESET THE STUDENT PASSWORD
+12. RESET THE STUDENT PASSWORD
 ----------------------------
 POST {{baseUrl}}/auth/password/reset/{{resetToken}}
 
@@ -180,7 +371,7 @@ invalid, or already used tokens return 400 with error code INVALID_RESET_TOKEN.
 Existing sessions for this account are revoked.
 
 
-9. LOGIN WITH THE NEW PASSWORD
+13. LOGIN WITH THE NEW PASSWORD
 ------------------------------
 POST {{baseUrl}}/auth/login
 
@@ -192,7 +383,7 @@ POST {{baseUrl}}/auth/login
 Expected: 200 OK. Save the returned token as studentToken again.
 
 
-10. CHANGE PASSWORD WHILE AUTHENTICATED
+14. CHANGE PASSWORD WHILE AUTHENTICATED
 ---------------------------------------
 PUT {{baseUrl}}/auth/password
 Authorization: Bearer {{studentToken}}
@@ -206,7 +397,7 @@ Expected: 204 No Content. All current sessions are revoked; log in again with
 the new password before making another authenticated request.
 
 
-11. LOGOUT
+15. LOGOUT
 ----------
 POST {{baseUrl}}/auth/logout
 Authorization: Bearer {{studentToken}}
