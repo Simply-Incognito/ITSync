@@ -12,6 +12,8 @@ import { authRouter } from './modules/identity/routes/auth.routes.js';
 import { organizationRouter } from './modules/organizations/routes/organization.routes.js';
 import { applicationTrackingRouter } from './modules/application-tracking/routes/application-tracking.routes.js';
 import { documentRouter } from './modules/documents/routes/document.routes.js';
+import { studentRouter } from './modules/students/routes/student.routes.js';
+import { opportunityRouter } from './modules/opportunities/routes/opportunity.routes.js';
 
 export function createApp() {
   const app = express();
@@ -54,6 +56,9 @@ export function createApp() {
   app.use('/api/v1/organizations', organizationRouter);
   app.use('/api/v1/application-tracking', applicationTrackingRouter);
   app.use('/api/v1/documents', documentRouter);
+  app.use('/api/v1/applications', applicationRouter);
+  app.use('/api/v1/students', studentRouter);
+  app.use('/api/v1/opportunities', opportunityRouter);
 
   app.use(notFoundHandler);
 
