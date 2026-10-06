@@ -183,6 +183,54 @@ export const openApiDocument = {
         },
       },
     },
+    '/students/me': {
+      get: {
+        summary: 'Get the authenticated student profile',
+        tags: ['Students'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Student profile.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '404': { description: 'Student profile not found.' },
+        },
+      },
+      post: {
+        summary: 'Create the authenticated student profile',
+        tags: ['Students'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '201': { description: 'Student profile created.' },
+          '400': { description: 'Invalid profile data.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '409': { description: 'Student profile already exists.' },
+        },
+      },
+      patch: {
+        summary: 'Update the authenticated student profile',
+        tags: ['Students'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Student profile updated.' },
+          '400': { description: 'Invalid profile data.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '404': { description: 'Student profile not found.' },
+        },
+      },
+      delete: {
+        summary: 'Delete the authenticated student profile',
+        tags: ['Students'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '204': { description: 'Student profile deleted.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '404': { description: 'Student profile not found.' },
+        },
+      },
+    },
     '/organizations': {
       post: {
         summary: 'Create an organization profile for the authenticated representative',
@@ -343,6 +391,202 @@ export const openApiDocument = {
         ],
         responses: {
           '200': { description: 'Organization suspended and decision audited.' },
+          '403': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/opportunities': {
+      get: {
+        summary: 'Search and filter published opportunities',
+        tags: ['Opportunities'],
+        parameters: [
+          { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'fieldOfStudy', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'industry', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'location', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'durationWeeks', in: 'query', required: false, schema: { type: 'integer' } },
+          { name: 'workArrangement', in: 'query', required: false, schema: { type: 'string', enum: ['onsite', 'hybrid', 'remote'] } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 20 } },
+        ],
+        responses: {
+          '200': { description: 'Paginated opportunities matching the search criteria.' },
+          '400': { description: 'Invalid search parameters.' },
+        },
+      },
+    },
+    '/opportunities/filters': {
+      get: {
+        summary: 'Get available filter options for opportunity search',
+        tags: ['Opportunities'],
+        responses: {
+          '200': { description: 'Available filter options.' },
+        },
+      },
+    },
+    '/opportunities/{opportunityId}': {
+      get: {
+        summary: 'Get a published opportunity that is still accepting applications',
+        tags: ['Opportunities'],
+        parameters: [
+          { name: 'opportunityId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Opportunity details.' },
+          '404': { description: 'Opportunity was not found.' },
+        },
+      },
+    },
+    '/opportunities/me': {
+      get: {
+        summary: 'List opportunities owned by the authenticated verified organization',
+        tags: ['Opportunities'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Organization opportunities.' },
+          '403': { description: 'Verified organization required.' },
+        },
+      },
+      post: {
+        summary: 'Create an opportunity draft for the authenticated verified organization',
+        tags: ['Opportunities'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '201': { description: 'Opportunity created in draft status.' },
+          '400': { description: 'Invalid opportunity details.' },
+          '403': { description: 'Verified organization required.' },
+        },
+      },
+    },
+    '/opportunities/me/{opportunityId}': {
+      get: {
+        summary: 'Get an opportunity owned by the authenticated organization',
+        tags: ['Opportunities'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'opportunityId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Organization opportunity.' },
+          '404': { description: 'Not found.' },
+        },
+      },
+      patch: {
+        summary: 'Update a draft or rejected opportunity',
+        tags: ['Opportunities'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'opportunityId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Opportunity updated.' },
+          '409': { description: 'Opportunity is not editable in its current state.' },
+        },
+      },
+    },
+    '/opportunities/me/{opportunityId}/submit': {
+      post: {
+        summary: 'Submit a draft or rejected opportunity for administrator review',
+        tags: ['Opportunities'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'opportunityId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Opportunity moved to pending review.' },
+          '409': { description: 'Opportunity is not in a submittable state.' },
+        },
+      },
+    },
+    '/opportunities/me/{opportunityId}/close': {
+      post: {
+        summary: 'Close a published opportunity',
+        tags: ['Opportunities'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'opportunityId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Opportunity closed.' },
+          '409': { description: 'Only published opportunities can be closed.' },
+        },
+      },
+    },
+    '/opportunities/admin/opportunities': {
+      get: {
+        summary: 'List opportunities for administrator review',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: ['draft', 'pending_review', 'published', 'rejected', 'closed', 'suspended'],
+            },
+          },
+        ],
+        responses: {
+          '200': { description: 'Opportunity review queue.' },
+          '403': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/opportunities/admin/opportunities/{opportunityId}': {
+      get: {
+        summary: 'Get opportunity details and moderation history',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'opportunityId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Opportunity review details.' },
+          '403': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/opportunities/admin/opportunities/{opportunityId}/approve': {
+      post: {
+        summary: 'Approve a pending opportunity and publish it',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'opportunityId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Opportunity published and decision audited.' },
+          '403': { description: 'Administrator role required.' },
+          '409': { description: 'Opportunity is not pending review.' },
+        },
+      },
+    },
+    '/opportunities/admin/opportunities/{opportunityId}/reject': {
+      post: {
+        summary: 'Reject a pending opportunity with a reason',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'opportunityId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Opportunity rejected and decision audited.' },
+          '403': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/opportunities/admin/opportunities/{opportunityId}/suspend': {
+      post: {
+        summary: 'Suspend a published opportunity with a reason',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'opportunityId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Opportunity suspended and decision audited.' },
           '403': { description: 'Administrator role required.' },
         },
       },

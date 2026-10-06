@@ -10,6 +10,8 @@ import { notFoundHandler } from './middleware/not-found.js';
 import { healthRouter } from './modules/health/health.routes.js';
 import { authRouter } from './modules/identity/routes/auth.routes.js';
 import { organizationRouter } from './modules/organizations/routes/organization.routes.js';
+import { studentRouter } from './modules/students/routes/student.routes.js';
+import { opportunityRouter } from './modules/opportunities/routes/opportunity.routes.js';
 
 export function createApp() {
   const app = express();
@@ -51,6 +53,8 @@ export function createApp() {
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/organizations', organizationRouter);
   app.use('/api/v1/applications', applicationRouter);
+  app.use('/api/v1/students', studentRouter);
+  app.use('/api/v1/opportunities', opportunityRouter);
 
   app.use(notFoundHandler);
 
