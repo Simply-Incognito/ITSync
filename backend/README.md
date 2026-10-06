@@ -6,7 +6,7 @@ Node.js + TypeScript API for the iSIWES placement platform. The backend is a mod
 
 - Node.js 20.19 or newer
 - npm 10 or newer
-- MongoDB 6 or newer, local or hosted
+- MongoDB 6 or newer configured as a replica set (required for atomic organization status and audit-event transactions)
 
 ## Setup on Windows PowerShell
 
@@ -17,7 +17,7 @@ Copy-Item .env.example .env
 npm install
 ```
 
-Update `MONGODB_URI` in `.env` to point to a running MongoDB instance. The example value works with a local MongoDB server listening on its default port.
+Update `MONGODB_URI` in `.env` to point to a replica-set MongoDB deployment. MongoDB Atlas is already replica-set capable; a local development server must be initialized as a single-node replica set before using organization review decisions.
 
 Start the API in development mode:
 
