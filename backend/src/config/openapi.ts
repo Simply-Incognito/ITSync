@@ -93,6 +93,84 @@ export const openApiDocument = {
         },
       },
     },
+    '/applications': {
+      post: {
+        summary: 'Submit an application for a published opportunity',
+        tags: ['Applications'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '201': { description: 'Application submitted successfully.' },
+          '400': { description: 'Application deadline passed or opportunity not available.' },
+          '403': { description: 'Organization not verified or student already applied.' },
+          '404': { description: 'Opportunity not found.' },
+        },
+      },
+    },
+    '/applications/my': {
+      get: {
+        summary: 'Get the authenticated student\'s applications',
+        tags: ['Applications'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Student applications.' },
+        },
+      },
+    },
+    '/applications/admin': {
+      get: {
+        summary: 'List applications for administrator review',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: ['submitted', 'under_review', 'shortlisted', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn'],
+            },
+          },
+        ],
+        responses: {
+          '200': { description: 'Applications matching the status filter.' },
+          '401': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/applications/:applicationId/status': {
+      patch: {
+        summary: 'Update application status (admin only)',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  status: {
+                    type: 'string',
+                    enum: ['submitted', 'under_review', 'shortlisted', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn'],
+                  },
+                  reason: { type: 'string', description: 'Reason for status change' },
+                },
+                required: ['status'],
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Application status updated.' },
+          '400': { description: 'Invalid status transition.' },
+          '403': { description: 'Administrator role required.' },
+          '404': { description: 'Application not found.' },
+        },
+      },
+    },
     '/auth/student-profile': {
       patch: {
         summary: 'Update the authenticated student profile',
