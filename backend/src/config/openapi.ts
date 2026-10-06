@@ -105,6 +105,54 @@ export const openApiDocument = {
         },
       },
     },
+    '/students/me': {
+      get: {
+        summary: 'Get the authenticated student profile',
+        tags: ['Students'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Student profile.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '404': { description: 'Student profile not found.' },
+        },
+      },
+      post: {
+        summary: 'Create the authenticated student profile',
+        tags: ['Students'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '201': { description: 'Student profile created.' },
+          '400': { description: 'Invalid profile data.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '409': { description: 'Student profile already exists.' },
+        },
+      },
+      patch: {
+        summary: 'Update the authenticated student profile',
+        tags: ['Students'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Student profile updated.' },
+          '400': { description: 'Invalid profile data.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '404': { description: 'Student profile not found.' },
+        },
+      },
+      delete: {
+        summary: 'Delete the authenticated student profile',
+        tags: ['Students'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '204': { description: 'Student profile deleted.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+          '404': { description: 'Student profile not found.' },
+        },
+      },
+    },
     '/organizations': {
       post: {
         summary: 'Create an organization profile for the authenticated representative',
