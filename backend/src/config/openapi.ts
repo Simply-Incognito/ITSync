@@ -93,6 +93,162 @@ export const openApiDocument = {
         },
       },
     },
+    '/administration/users': {
+      get: {
+        summary: 'Get users for administration dashboard',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'role', in: 'query', required: false, schema: { type: 'string', enum: ['student', 'organization_representative', 'administrator'] } },
+          { name: 'status', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 20 } },
+        ],
+        responses: {
+          '200': { description: 'Users with pagination.' },
+          '401': { description: 'Administrator role required.' },
+          '403': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/administration/organizations': {
+      get: {
+        summary: 'Get organizations for administration dashboard',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['draft', 'pending', 'verified', 'rejected', 'suspended'] } },
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 20 } },
+        ],
+        responses: {
+          '200': { description: 'Organizations with pagination.' },
+          '401': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/administration/dashboard/stats': {
+      get: {
+        summary: 'Get administration dashboard statistics',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Administration statistics.' },
+          '401': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/administration/logs': {
+      post: {
+        summary: 'Log an administration action',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['actorUserId', 'action', 'targetType', 'targetId'],
+                properties: {
+                  actorUserId: { type: 'string', description: 'User ID who performed the action' },
+                  action: { type: 'string', description: 'Action performed' },
+                  targetType: { type: 'string', enum: ['user', 'organization', 'opportunity', 'application'] },
+                  targetId: { type: 'string', description: 'Target ID affected' },
+                  details: { type: 'object', description: 'Additional details', default: {} },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Action logged successfully.' },
+          '400': { description: 'Missing required fields.' },
+          '401': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/administration/logs': {
+      get: {
+        summary: 'Get administration logs',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'targetType', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'targetId', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'actorUserId', in: 'query', required: false, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Administration logs.' },
+          '401': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/administration/users/:userId/status': {
+      patch: {
+        summary: 'Update user status',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'userId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['status'],
+                properties: {
+                  status: { type: 'string', enum: ['active', 'suspended'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'User status updated.' },
+          '400': { description: 'Invalid status value.' },
+          '401': { description: 'Administrator role required.' },
+          '404': { description: 'User not found.' },
+        },
+      },
+    },
+    '/administration/organizations/:organizationId/verification': {
+      patch: {
+        summary: 'Update organization verification status',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'organizationId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['verificationStatus'],
+                properties: {
+                  verificationStatus: {
+                    type: 'string',
+                    enum: ['verified', 'rejected', 'suspended'],
+                  },
+                  notes: { type: 'string', description: 'Reason for rejection or approval' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Organization verification status updated.' },
+          '400': { description: 'Invalid verification status.' },
+          '401': { description: 'Administrator role required.' },
+          '404': { description: 'Organization not found.' },
+        },
+      },
+    },
     '/auth/student-profile': {
       patch: {
         summary: 'Update the authenticated student profile',
