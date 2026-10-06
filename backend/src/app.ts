@@ -50,6 +50,7 @@ export function createApp() {
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/organizations', organizationRouter);
+  app.use('/api/v1/notifications', notificationRouter);
 
   app.use(notFoundHandler);
 
