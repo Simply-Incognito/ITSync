@@ -94,7 +94,7 @@ export default function OrganizationVerification() {
   const StatusIcon = statusConfig.icon
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
+    <div className="workspace-page min-h-screen bg-slate-50 py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Organization Verification</h1>
