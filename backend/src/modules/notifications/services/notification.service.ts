@@ -1,7 +1,7 @@
 import mongoose, { Types } from 'mongoose';
-import { Application } from '../applications/models/application.model.js';
-import { Opportunity } from '../opportunities/models/opportunity.model.js';
-import { Organization } from '../organizations/models/organization.model.js';
+import { Application } from '../../applications/models/application.model.js';
+import { Opportunity } from '../../opportunities/models/opportunity.model.js';
+import { Organization } from '../../organizations/models/organization.model.js';
 import { User } from '../../identity/models/user.model.js';
 
 export interface Notification {
@@ -18,7 +18,7 @@ export interface Notification {
   readAt?: Date | null;
 }
 
-export type NotificationType = 
+export type NotificationType =
   | 'application_submitted'
   | 'application_status_changed'
   | 'application_accepted'
@@ -77,14 +77,7 @@ export async function createNotification(
 export async function getNotifications(
   filters: NotificationFilters,
 ): Promise<PaginatedNotifications> {
-  const {
-    recipientId,
-    recipientRole,
-    type,
-    read,
-    page = 1,
-    limit = 20,
-  } = filters;
+  const { recipientId, recipientRole, type, read, page = 1, limit = 20 } = filters;
 
   const filter: Record<string, unknown> = {};
 
@@ -96,11 +89,7 @@ export async function getNotifications(
   const skip = (page - 1) * limit;
 
   const [notifications, total] = await Promise.all([
-    Notification.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
+    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     Notification.countDocuments(filter),
   ]);
 
@@ -154,7 +143,9 @@ export async function notifyApplicationSubmitted(
   opportunityId: Types.ObjectId,
 ): Promise<Notification> {
   const student = await User.findById(studentId).select('role').lean();
-  const opportunity = await Opportunity.findById(opportunityId).populate('organizationId', 'legalName').lean();
+  const opportunity = await Opportunity.findById(opportunityId)
+    .populate('organizationId', 'legalName')
+    .lean();
 
   return createNotification(
     opportunity.organizationId._id,

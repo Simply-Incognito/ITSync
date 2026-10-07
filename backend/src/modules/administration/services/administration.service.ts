@@ -1,11 +1,16 @@
 import mongoose, { Types } from 'mongoose';
 import { User, type UserRole } from '../../identity/models/user.model.js';
-import { Organization, type OrganizationStatus } from '../organizations/models/organization.model.js';
-import { Application } from '../applications/models/application.model.js';
-import { Opportunity } from '../opportunities/models/opportunity.model.js';
-import { ApplicationStatus } from '../applications/models/application.model.js';
-import { ApplicationReviewEvent } from '../applications/models/application-review-event.model.js';
-import { OpportunityReviewEvent } from '../opportunities/models/opportunity-review-event.model.js';
+import {
+  Organization,
+  type OrganizationStatus,
+} from '../../organizations/models/organization.model.js';
+import {
+  Application,
+  type ApplicationStatus,
+} from '../../applications/models/application.model.js';
+import { ApplicationReviewEvent } from '../../applications/models/application-review-event.model.js';
+import { Opportunity } from '../../opportunities/models/opportunity.model.js';
+import { OpportunityReviewEvent } from '../../opportunities/models/opportunity-review-event.model.js';
 
 export interface UserManagementFilter {
   role?: UserRole;
@@ -149,9 +154,7 @@ export async function getAdministrationDashboardStats(): Promise<AdministrationD
   ]);
 
   const [applicationsByStatus] = await Promise.all([
-    Application.aggregate([
-      { $group: { _id: '$status', count: { $sum: 1 } } },
-    ]),
+    Application.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
   ]);
 
   const applicationsByStatusRecord: Record<ApplicationStatus, number> = {

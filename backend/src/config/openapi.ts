@@ -1,4 +1,4 @@
-﻿export const openApiDocument = {
+export const openApiDocument = {
   openapi: '3.0.3',
   info: {
     title: 'iSIWES API',
@@ -99,7 +99,15 @@
         tags: ['Administration'],
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'role', in: 'query', required: false, schema: { type: 'string', enum: ['student', 'organization_representative', 'administrator'] } },
+          {
+            name: 'role',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: ['student', 'organization_representative', 'administrator'],
+            },
+          },
           { name: 'status', in: 'query', required: false, schema: { type: 'string' } },
           { name: 'search', in: 'query', required: false, schema: { type: 'string' } },
           { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
@@ -118,7 +126,15 @@
         tags: ['Administration'],
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['draft', 'pending', 'verified', 'rejected', 'suspended'] } },
+          {
+            name: 'status',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: ['draft', 'pending', 'verified', 'rejected', 'suspended'],
+            },
+          },
           { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 20 } },
         ],
@@ -154,7 +170,10 @@
                 properties: {
                   actorUserId: { type: 'string', description: 'User ID who performed the action' },
                   action: { type: 'string', description: 'Action performed' },
-                  targetType: { type: 'string', enum: ['user', 'organization', 'opportunity', 'application'] },
+                  targetType: {
+                    type: 'string',
+                    enum: ['user', 'organization', 'opportunity', 'application'],
+                  },
                   targetId: { type: 'string', description: 'Target ID affected' },
                   details: { type: 'object', description: 'Additional details', default: {} },
                 },
@@ -168,8 +187,6 @@
           '401': { description: 'Administrator role required.' },
         },
       },
-    },
-    '/administration/logs': {
       get: {
         summary: 'Get administration logs',
         tags: ['Administration'],
@@ -190,9 +207,7 @@
         summary: 'Update user status',
         tags: ['Administration'],
         security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'userId', in: 'path', required: true, schema: { type: 'string' } },
-        ],
+        parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: {
           required: true,
           content: {
@@ -225,10 +240,33 @@
         ],
         requestBody: {
           required: true,
-=======
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['verificationStatus'],
+                properties: {
+                  verificationStatus: {
+                    type: 'string',
+                    enum: ['verified', 'rejected', 'suspended'],
+                  },
+                  notes: { type: 'string', description: 'Reason for rejection or approval' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Organization verification status updated.' },
+          '400': { description: 'Invalid verification status.' },
+          '401': { description: 'Administrator role required.' },
+          '404': { description: 'Organization not found.' },
+        },
+      },
+    },
     '/application-tracking/me': {
       get: {
-        summary: 'Get the authenticated student\'s application dashboard',
+        summary: 'Get the authenticated student application dashboard',
         tags: ['ApplicationTracking'],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -240,7 +278,7 @@
     },
     '/application-tracking/organization/me': {
       get: {
-        summary: 'Get the authenticated organization representative\'s application dashboard',
+        summary: 'Get the authenticated organization application dashboard',
         tags: ['ApplicationTracking'],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -270,6 +308,18 @@
       get: {
         summary: 'Get application status history',
         tags: ['ApplicationTracking'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Application status history.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Administrator role required.' },
+          '404': { description: 'Application not found.' },
+        },
+      },
+    },
     '/applications': {
       post: {
         summary: 'Submit an application for a published opportunity',
@@ -285,12 +335,10 @@
     },
     '/applications/my': {
       get: {
-        summary: 'Get the authenticated student\'s applications',
+        summary: 'Get the authenticated student applications',
         tags: ['Applications'],
         security: [{ bearerAuth: [] }],
-        responses: {
-          '200': { description: 'Student applications.' },
-        },
+        responses: { '200': { description: 'Student applications.' } },
       },
     },
     '/applications/admin': {
@@ -305,7 +353,16 @@
             required: false,
             schema: {
               type: 'string',
-              enum: ['submitted', 'under_review', 'shortlisted', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn'],
+              enum: [
+                'submitted',
+                'under_review',
+                'shortlisted',
+                'interview',
+                'offer',
+                'accepted',
+                'rejected',
+                'withdrawn',
+              ],
             },
           },
         ],
@@ -323,41 +380,34 @@
         parameters: [
           { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
         ],
-        responses: {
-          '200': { description: 'Application status history.' },
-          '401': { description: 'Authentication required.' },
         requestBody: {
+          required: true,
           content: {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['verificationStatus'],
-                properties: {
-                  verificationStatus: {
-                    type: 'string',
-                    enum: ['verified', 'rejected', 'suspended'],
-                  },
-                  notes: { type: 'string', description: 'Reason for rejection or approval' },
-                },
-=======
+                required: ['status'],
                 properties: {
                   status: {
                     type: 'string',
-                    enum: ['submitted', 'under_review', 'shortlisted', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn'],
+                    enum: [
+                      'submitted',
+                      'under_review',
+                      'shortlisted',
+                      'interview',
+                      'offer',
+                      'accepted',
+                      'rejected',
+                      'withdrawn',
+                    ],
                   },
                   reason: { type: 'string', description: 'Reason for status change' },
                 },
-                required: ['status'],
               },
             },
           },
         },
         responses: {
-          '200': { description: 'Organization verification status updated.' },
-          '400': { description: 'Invalid verification status.' },
-          '401': { description: 'Administrator role required.' },
-          '404': { description: 'Organization not found.' },
-=======
           '200': { description: 'Application status updated.' },
           '400': { description: 'Invalid status transition.' },
           '403': { description: 'Administrator role required.' },
@@ -599,7 +649,12 @@
           { name: 'industry', in: 'query', required: false, schema: { type: 'string' } },
           { name: 'location', in: 'query', required: false, schema: { type: 'string' } },
           { name: 'durationWeeks', in: 'query', required: false, schema: { type: 'integer' } },
-          { name: 'workArrangement', in: 'query', required: false, schema: { type: 'string', enum: ['onsite', 'hybrid', 'remote'] } },
+          {
+            name: 'workArrangement',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', enum: ['onsite', 'hybrid', 'remote'] },
+          },
           { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 20 } },
         ],
@@ -785,7 +840,6 @@
         },
       },
     },
-  },
     '/documents/student/upload': {
       post: {
         summary: 'Upload a student document (CV, supporting files)',
@@ -916,14 +970,21 @@
         },
       },
     },
-  },
     '/notifications': {
       get: {
-        summary: 'Get the authenticated user\'s notifications',
+        summary: "Get the authenticated user's notifications",
         tags: ['Notifications'],
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'recipientRole', in: 'query', required: false, schema: { type: 'string', enum: ['student', 'organization_representative', 'administrator'] } },
+          {
+            name: 'recipientRole',
+            in: 'query',
+            required: false,
+            schema: {
+              type: 'string',
+              enum: ['student', 'organization_representative', 'administrator'],
+            },
+          },
           { name: 'read', in: 'query', required: false, schema: { type: 'boolean' } },
           { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
           { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 20 } },
@@ -978,4 +1039,3 @@
     },
   },
 } as const;
-

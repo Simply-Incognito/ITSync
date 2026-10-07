@@ -3,8 +3,8 @@ import { AppError } from '../../../errors/app-error.js';
 import { User, type UserRole } from '../../identity/models/user.model.js';
 import { Student } from '../../identity/models/student.model.js';
 import { Organization } from '../../organizations/models/organization.model.js';
-import { Opportunity } from '../models/opportunity.model.js';
-import { ApplicationStatus } from '../models/application.model.js';
+import { Opportunity } from '../../opportunities/models/opportunity.model.js';
+import { Application, type ApplicationStatus } from '../models/application.model.js';
 import { ApplicationReviewEvent } from '../models/application-review-event.model.js';
 
 export interface CreateApplicationInput {
@@ -110,20 +110,12 @@ export async function createApplication(
 
   // Check if slots are still available
   if (opportunity.availableSlots <= 0) {
-    throw new AppError(
-      'No available slots for this opportunity.',
-      409,
-      'NO_AVAILABLE_SLOTS',
-    );
+    throw new AppError('No available slots for this opportunity.', 409, 'NO_AVAILABLE_SLOTS');
   }
 
   // Check if application deadline hasn't passed
   if (opportunity.applicationDeadline <= new Date()) {
-    throw new AppError(
-      'The application deadline has passed.',
-      400,
-      'APPLICATION_DEADLINE_PASSED',
-    );
+    throw new AppError('The application deadline has passed.', 400, 'APPLICATION_DEADLINE_PASSED');
   }
 
   // Create the application
@@ -158,13 +150,7 @@ export async function listApplications(
   filters: ApplicationFilters,
   userId: string,
 ): Promise<PaginatedApplications> {
-  const {
-    status,
-    studentId,
-    opportunityId,
-    page = 1,
-    limit = 20,
-  } = filters;
+  const { status, studentId, opportunityId, page = 1, limit = 20 } = filters;
 
   const filter: Record<string, unknown> = {};
 
@@ -181,7 +167,9 @@ export async function listApplications(
     if (!opportunityId) {
       const myOrganizations = await Organization.findOne({
         representativeUserId: userId,
-      }).select('_id').lean();
+      })
+        .select('_id')
+        .lean();
       if (myOrganizations) {
         const oppIds = await Opportunity.distinct('_id', {
           organizationId: myOrganizations._id,
