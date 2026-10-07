@@ -120,7 +120,7 @@ organizationRouter
     },
   );
 
-/*
+
 organizationRouter.post(
   '/me/documents',
   requireAuthentication,
@@ -148,7 +148,6 @@ organizationRouter.post(
   },
 );
 
-*/
 
 organizationRouter.get(
   '/me/documents/:documentId',
