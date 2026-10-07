@@ -1,39 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary-50: #f2faf3;
-  --color-primary-100: #e4f4e6;
-  --color-primary-200: #c8e9cd;
-  --color-primary-300: #a4d9ae;
-  --color-primary-400: #78c487;
-  --color-primary-500: #51a964;
-  --color-primary-600: #38884a;
-  --color-primary-700: #2f6d3d;
-  --color-primary-800: #285735;
-  --color-primary-900: #21482d;
-  --color-primary-950: #102718;
+  --color-primary-50: #effdf4;
+  --color-primary-100: #d9fbe6;
+  --color-primary-200: #b6f2ce;
+  --color-primary-300: #83e5ae;
+  --color-primary-400: #4bd28a;
+  --color-primary-500: #29b970;
+  --color-primary-600: #238653;
+  --color-primary-700: #1d7047;
+  --color-primary-800: #1b593b;
+  --color-primary-900: #174a33;
+  --color-primary-950: #08291b;
 
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 :root {
   font-family: var(--font-sans);
-  color: #1c2d22;
-  background: #f7faf6;
+  color: #20312b;
+  background: #f7fbf8;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
   --surface: #fff;
-  --surface-soft: #f5faf4;
-  --border: #e4ece3;
-  --text: #1c2d22;
-  --muted: #647468;
-  --green: #38884a;
-  --green-dark: #285735;
-  --green-pale: #eaf5e9;
-  --shadow-card: 0 12px 35px rgba(33, 72, 45, 0.06);
+  --surface-soft: #f1faf4;
+  --border: #e3eee7;
+  --text: #20312b;
+  --muted: #66776f;
+  --green: #238653;
+  --green-dark: #1d7047;
+  --green-pale: #e3f8eb;
+  --shadow-card: 0 12px 32px rgba(36, 91, 62, 0.055);
 }
 
 * {
@@ -51,8 +51,9 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(ellipse at 12% 0%, rgba(221, 241, 220, 0.46), transparent 38rem),
-    #f7faf6;
+    radial-gradient(ellipse at 10% 0%, rgba(205, 248, 222, 0.42), transparent 34rem),
+    radial-gradient(ellipse at 95% 10%, rgba(218, 241, 255, 0.32), transparent 30rem),
+    #f7fbf8;
   color: var(--text);
 }
 
@@ -93,66 +94,74 @@ button:disabled {
 }
 
 ::selection {
-  background: #d6edd8;
-  color: #21482d;
+  background: #c9f3d8;
+  color: #174a33;
 }
 
 *:focus-visible {
-  outline: 3px solid rgba(81, 169, 100, 0.48);
+  outline: 3px solid rgba(41, 185, 112, 0.42);
   outline-offset: 3px;
 }
 
 /* Give the existing utility-based screens a consistent, softer canvas. */
 .bg-slate-50 {
-  background-color: #f7faf6;
+  background-color: #f7fbf8;
 }
 
 .text-slate-800 {
-  color: #1c2d22;
+  color: #20312b;
 }
 
 .text-slate-700 {
-  color: #34483a;
+  color: #3d5148;
 }
 
 .text-slate-600 {
-  color: #647468;
+  color: #66776f;
 }
 
 .border-slate-200 {
-  border-color: #e4ece3;
+  border-color: #e3eee7;
 }
 
 .border-slate-300 {
-  border-color: #d7e2d6;
+  border-color: #d7e7dc;
 }
 
 .bg-primary-600 {
-  background-color: #38884a;
+  background-color: #238653;
 }
 
 .hover\:bg-primary-700:hover {
-  background-color: #2f6d3d;
+  background-color: #1d7047;
 }
 
 .text-primary-600 {
-  color: #38884a;
+  color: #238653;
 }
 
 .text-primary-700 {
-  color: #2f6d3d;
+  color: #1d7047;
 }
 
 .bg-primary-50 {
-  background-color: #f2faf3;
+  background-color: #effdf4;
 }
 
 .bg-primary-100 {
-  background-color: #e4f4e6;
+  background-color: #d9fbe6;
 }
 
 .border-primary-300 {
-  border-color: #a4d9ae;
+  border-color: #83e5ae;
+}
+
+.text-primary-500 {
+  color: #29b970;
+}
+
+.bg-primary-200 {
+  background-color: #b6f2ce;
 }
 
 /* Comfortable defaults for forms shared across registration and profile screens. */
@@ -160,10 +169,10 @@ input:not([type="checkbox"]):not([type="radio"]),
 textarea,
 select {
   min-height: 2.9rem;
-  border-color: #d7e2d6;
+  border-color: #d7e7dc;
   border-radius: 0.8rem;
   background-color: #fff;
-  color: #1c2d22;
+  color: #20312b;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
@@ -174,22 +183,70 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: #96a49a;
+  color: #92a39a;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: #78c487;
-  box-shadow: 0 0 0 4px rgba(120, 196, 135, 0.16);
+  border-color: #4bd28a;
+  box-shadow: 0 0 0 4px rgba(75, 210, 138, 0.16);
   outline: none;
 }
 
 label {
-  color: #34483a;
+  color: #3d5148;
 }
 
-/* Shared surface treatment across dashboards and account forms. */
+/* Shared rhythm and surfaces across student and organization workspaces. */
+.workspace-page {
+  padding-block: clamp(2rem, 4vw, 3.5rem);
+}
+
+.workspace-page h1 {
+  color: #20312b;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  line-height: 1.16;
+}
+
+.workspace-page h1 + p {
+  max-width: 48rem;
+  color: #66776f;
+  font-size: 0.98rem;
+  line-height: 1.65;
+}
+
+.workspace-page h2 {
+  letter-spacing: -0.025em;
+}
+
+.workspace-page .bg-white.rounded-2xl {
+  border-color: #e3eee7;
+  box-shadow: var(--shadow-card);
+}
+
+.workspace-page .bg-white.rounded-2xl.border {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.workspace-page a.bg-white.rounded-2xl.border:hover {
+  border-color: #b6e9c9;
+  box-shadow: 0 16px 36px rgba(36, 91, 62, 0.09);
+  transform: translateY(-2px);
+}
+
+.workspace-page form.bg-white.rounded-2xl {
+  padding: clamp(1.25rem, 3.5vw, 2rem);
+}
+
+.workspace-page input:not([type="checkbox"]):not([type="radio"]),
+.workspace-page textarea,
+.workspace-page select {
+  min-height: 3rem;
+}
+
 .rounded-2xl.border,
 form.rounded-2xl,
 .rounded-2xl.shadow-sm {
@@ -218,22 +275,32 @@ button,
   animation: float-in 420ms ease-out both;
 }
 
+@media (max-width: 640px) {
+  .workspace-page {
+    padding-block: 1.5rem;
+  }
+
+  .workspace-page .bg-white.rounded-2xl.border {
+    border-radius: 1.15rem;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f6ef;
+  background: #f1f8f3;
 }
 
 ::-webkit-scrollbar-thumb {
-  border: 3px solid #f1f6ef;
+  border: 3px solid #f1f8f3;
   border-radius: 999px;
-  background: #b7cdb8;
+  background: #b9ddc7;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #8eaf91;
+  background: #83c99e;
 }
 
 @media (prefers-reduced-motion: reduce) {
