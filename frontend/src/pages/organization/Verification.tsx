@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Shield, CheckCircle, Clock, XCircle, FileText, Upload, AlertCircle } from 'lucide-react'
 import { organizationApi } from '../../services/api'
@@ -9,6 +9,8 @@ export default function OrganizationVerification() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const [uploadingType, setUploadingType] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetchVerificationStatus()
@@ -23,6 +25,27 @@ export default function OrganizationVerification() {
       console.error('Failed to fetch verification status:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, docType: string) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setUploadingType(docType)
+    setMessage('')
+
+    try {
+      await organizationApi.uploadDocument(file, docType)
+      setMessage('Document uploaded successfully!')
+      fetchVerificationStatus()
+    } catch (error: any) {
+      setMessage(error.message || 'Failed to upload document.')
+    } finally {
+      setUploadingType(null)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -152,28 +175,46 @@ export default function OrganizationVerification() {
                     key={doc.type}
                     className="flex items-center justify-between p-4 border border-slate-200 rounded-xl"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                       {uploaded ? (
                         <CheckCircle className="text-green-500" size={24} />
                       ) : (
                         <Upload className="text-slate-400" size={24} />
                       )}
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium text-slate-800">{doc.label}</p>
                         {uploaded && (
                           <p className="text-sm text-slate-500">{uploaded.originalName}</p>
                         )}
                       </div>
                     </div>
-                    {uploaded ? (
-                      <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                        Uploaded
-                      </span>
-                    ) : (
-                      <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-medium rounded-full">
-                        Required
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {uploaded ? (
+                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                          Uploaded
+                        </span>
+                      ) : (
+                        <>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => handleFileSelect(e, doc.type)}
+                            className="hidden"
+                            disabled={uploadingType !== null}
+                          />
+                          <button
+                            onClick={() => {
+                              fileInputRef.current?.click()
+                            }}
+                            disabled={uploadingType !== null}
+                            className="px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-full hover:bg-primary-700 transition-colors disabled:opacity-50"
+                          >
+                            {uploadingType === doc.type ? 'Uploading...' : 'Upload'}
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )
               })}

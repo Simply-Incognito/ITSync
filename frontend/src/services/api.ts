@@ -85,6 +85,28 @@ export const organizationApi = {
     request<{ organization: any }>('/organizations/me/verification', {
       method: 'POST',
     }),
+  uploadDocument: (file: File, documentType: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return fetch(`${API_BASE}/organizations/me/documents`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    }).then((response) => {
+      if (!response.ok) {
+        return response.json().then((error) => {
+          throw new Error(error.error?.message || 'Failed to upload document');
+        });
+      }
+      return response.json();
+    });
+  },
 }
 
 export const opportunityApi = {
