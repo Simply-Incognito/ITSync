@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { getDashboardPath } from '../../utils/navigation'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -19,8 +20,8 @@ export default function Login() {
     setIsLoading(true)
 
     try {
-      await login(email, password)
-      navigate('/')
+      const user = await login(email, password)
+      navigate(getDashboardPath(user.role), { replace: true })
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.')
     } finally {

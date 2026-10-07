@@ -28,7 +28,7 @@ interface AuthContextType {
   token: string | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<User>
   register: (data: RegisterData) => Promise<void>
   logout: () => void
   updateProfile: (data: Partial<StudentProfile>) => Promise<void>
@@ -88,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(response.accessToken)
     setUser(response.user)
     localStorage.setItem('token', response.accessToken)
+    return response.user
   }
 
   const register = async (data: RegisterData) => {

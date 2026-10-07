@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, Building2, GraduationCap, Shield, Search, CheckCircle } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { getDashboardPath } from '../utils/navigation'
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -9,6 +11,12 @@ const fadeUp = {
 }
 
 export default function Home() {
+  const { user } = useAuth()
+
+  if (user && user.role !== 'administrator') {
+    return <Navigate to={getDashboardPath(user.role)} replace />
+  }
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
