@@ -1,10 +1,11 @@
 import mongoose, { Types } from 'mongoose';
-import { Application } from '../models/application.model.js';
-import { Opportunity } from '../models/opportunity.model.js';
+import { AppError } from '../../../errors/app-error.js';
+import { Application } from '../../applications/models/application.model.js';
+import { ApplicationReviewEvent } from '../../applications/models/application-review-event.model.js';
+import { Opportunity } from '../../opportunities/models/opportunity.model.js';
 import { Student } from '../../identity/models/student.model.js';
 import { Organization } from '../../organizations/models/organization.model.js';
 import { User } from '../../identity/models/user.model.js';
-import { ApplicationReviewEvent } from '../models/application-review-event.model.js';
 
 export interface StudentDashboardData {
   activeApplications: unknown[];
@@ -22,7 +23,11 @@ export async function getStudentDashboard(identity: { id: string; role: string }
   const userId = identity.id;
 
   if (identity.role !== 'student') {
-    throw new AppError('Application tracking is only available to students.', 403, 'ROLE_FORBIDDEN');
+    throw new AppError(
+      'Application tracking is only available to students.',
+      403,
+      'ROLE_FORBIDDEN',
+    );
   }
 
   const [applications, applicationCount] = await Promise.all([
@@ -42,10 +47,14 @@ export async function getStudentDashboard(identity: { id: string; role: string }
 
 export async function getOrganizationDashboard(
   representativeUserId: string,
-  identity: { id: string; role: string }
+  identity: { id: string; role: string },
 ) {
   if (identity.role !== 'organization_representative') {
-    throw new AppError('Application tracking is only available to organization representatives.', 403, 'ROLE_FORBIDDEN');
+    throw new AppError(
+      'Application tracking is only available to organization representatives.',
+      403,
+      'ROLE_FORBIDDEN',
+    );
   }
 
   // Find the organization for this representative
@@ -99,9 +108,7 @@ export async function getOrganizationDashboard(
   };
 }
 
-export async function getApplicationReview(
-  applicationId: string,
-): Promise<{
+export async function getApplicationReview(applicationId: string): Promise<{
   application: unknown;
   events: unknown[];
 }> {
@@ -119,12 +126,8 @@ export async function getApplicationReview(
   return { application, events };
 }
 
-export async function getApplicationStatusHistory(
-  applicationId: string,
-): Promise<unknown[]> {
-  const events = await ApplicationReviewEvent.find({ applicationId })
-    .sort({ createdAt: 1 })
-    .lean();
+export async function getApplicationStatusHistory(applicationId: string): Promise<unknown[]> {
+  const events = await ApplicationReviewEvent.find({ applicationId }).sort({ createdAt: 1 }).lean();
 
   return events;
 }

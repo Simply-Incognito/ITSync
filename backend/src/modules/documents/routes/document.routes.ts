@@ -1,11 +1,7 @@
 import { Router, type Request } from 'express';
 import { AppError } from '../../../errors/app-error.js';
 import { requireAuthentication, requireRoles } from '../../identity/middleware/authenticate.js';
-import {
-  uploadDocument,
-  downloadDocument,
-  deleteDocument,
-} from '../services/document.service.js';
+import { uploadDocument, downloadDocument, deleteDocument } from '../services/document.service.js';
 import { documentUploadSchema } from '../validations/document.validation.js';
 import multer from 'multer';
 
@@ -22,7 +18,7 @@ function requireIdentity(request: Request) {
 const studentAccess = [requireAuthentication, requireRoles('student')];
 const orgAccess = [requireAuthentication, requireRoles('organization_representative')];
 
-const documentRouter = Router();
+export const documentRouter = Router();
 
 // Student document upload
 documentRouter.post(
@@ -35,11 +31,7 @@ documentRouter.post(
     });
 
     if (!result.success) {
-      throw new AppError(
-        'Invalid document type.',
-        400,
-        'INVALID_DOCUMENT_TYPE',
-      );
+      throw new AppError('Invalid document type.', 400, 'INVALID_DOCUMENT_TYPE');
     }
 
     const uploaded = await uploadDocument({
@@ -63,11 +55,7 @@ documentRouter.post(
     });
 
     if (!result.success) {
-      throw new AppError(
-        'Invalid document type.',
-        400,
-        'INVALID_DOCUMENT_TYPE',
-      );
+      throw new AppError('Invalid document type.', 400, 'INVALID_DOCUMENT_TYPE');
     }
 
     const uploaded = await uploadDocument({
@@ -82,26 +70,18 @@ documentRouter.post(
 );
 
 // Download document
-documentRouter.get(
-  '/:documentId/download',
-  ...orgAccess,
-  async (request, response) => {
-    const document = await downloadDocument(new request.params.documentId);
-    response.set('Content-Type', document.contentType);
-    response.set(
-      'Content-Disposition',
-      `attachment; filename*=UTF-8''${encodeURIComponent(document.originalName)}`,
-    );
-    response.send(document);
-  },
-);
+documentRouter.get('/:documentId/download', ...orgAccess, async (request, response) => {
+  const document = await downloadDocument(new request.params.documentId());
+  response.set('Content-Type', document.contentType);
+  response.set(
+    'Content-Disposition',
+    `attachment; filename*=UTF-8''${encodeURIComponent(document.originalName)}`,
+  );
+  response.send(document);
+});
 
 // Delete document
-documentRouter.delete(
-  '/:documentId',
-  ...orgAccess,
-  async (request, response) => {
-    await deleteDocument(new request.params.documentId);
-    response.status(204).end();
-  },
-);
+documentRouter.delete('/:documentId', ...orgAccess, async (request, response) => {
+  await deleteDocument(new request.params.documentId());
+  response.status(204).end();
+});
