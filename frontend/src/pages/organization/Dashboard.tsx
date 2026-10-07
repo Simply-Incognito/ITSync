@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building2, FileText, Users, Briefcase, Clock, CheckCircle, Plus, Eye } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
 import { organizationApi, opportunityApi, applicationApi } from '../../services/api'
 
 export default function OrganizationDashboard() {
-  const { user } = useAuth()
   const [organization, setOrganization] = useState<any>(null)
   const [opportunities, setOpportunities] = useState<any[]>([])
   const [applications, setApplications] = useState<any[]>([])
@@ -39,17 +37,6 @@ export default function OrganizationDashboard() {
     { label: 'Under Review', value: applications.filter((a) => a.status === 'under_review').length, icon: Clock, color: 'bg-yellow-500' },
     { label: 'Accepted', value: applications.filter((a) => a.status === 'accepted').length, icon: CheckCircle, color: 'bg-green-500' },
   ]
-
-  const getVerificationBadge = (status: string) => {
-    const badges: Record<string, { text: string; color: string }> = {
-      draft: { text: 'Draft', color: 'bg-gray-100 text-gray-700' },
-      pending: { text: 'Pending Review', color: 'bg-yellow-100 text-yellow-700' },
-      verified: { text: 'Verified', color: 'bg-green-100 text-green-700' },
-      rejected: { text: 'Rejected', color: 'bg-red-100 text-red-700' },
-      suspended: { text: 'Suspended', color: 'bg-red-100 text-red-700' },
-    }
-    return badges[status] || { text: status, color: 'bg-gray-100 text-gray-700' }
-  }
 
   if (loading) {
     return (

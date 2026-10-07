@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Briefcase, FileText, Bell, User, TrendingUp, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Briefcase, FileText, User, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { applicationApi } from '../../services/api'
 

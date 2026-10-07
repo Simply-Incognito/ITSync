@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Building2, Mail, Phone, MapPin, Globe, User, Save } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { Building2, MapPin, User, Save } from 'lucide-react'
 import { organizationApi } from '../../services/api'
 
 export default function OrganizationProfile() {
-  const { user } = useAuth()
   const [organization, setOrganization] = useState<any>(null)
   const [formData, setFormData] = useState({
     legalName: '',

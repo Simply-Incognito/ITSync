@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { User, Mail, Phone, GraduationCap, MapPin, Code, Save } from 'lucide-react'
+import { User, GraduationCap, MapPin, Save } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { studentApi } from '../../services/api'
 
 export default function StudentProfile() {
   const { studentProfile, updateProfile } = useAuth()

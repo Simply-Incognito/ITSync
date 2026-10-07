@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Menu, X, LogOut, User, Building2 } from 'lucide-react'
+import { Menu, X, LogOut } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Navbar() {

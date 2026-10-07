@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight, Building2, GraduationCap, Shield, Search, Users, CheckCircle } from 'lucide-react'
+import { ArrowRight, Building2, GraduationCap, Shield, Search, CheckCircle } from 'lucide-react'
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },

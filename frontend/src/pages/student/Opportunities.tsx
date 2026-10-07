@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, MapPin, Clock, Briefcase, Filter, Building2 } from 'lucide-react'
+import { Search, MapPin, Clock, Briefcase, Building2 } from 'lucide-react'
 import { opportunityApi } from '../../services/api'
 
 export default function StudentOpportunities() {
