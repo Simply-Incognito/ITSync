@@ -1,65 +1,248 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary-50: #f0fdf4;
-  --color-primary-100: #dcfce7;
-  --color-primary-200: #bbf7d0;
-  --color-primary-300: #86efac;
-  --color-primary-400: #4ade80;
-  --color-primary-500: #22c55e;
-  --color-primary-600: #16a34a;
-  --color-primary-700: #15803d;
-  --color-primary-800: #166534;
-  --color-primary-900: #14532d;
-  --color-primary-950: #052e16;
+  --color-primary-50: #f2faf3;
+  --color-primary-100: #e4f4e6;
+  --color-primary-200: #c8e9cd;
+  --color-primary-300: #a4d9ae;
+  --color-primary-400: #78c487;
+  --color-primary-500: #51a964;
+  --color-primary-600: #38884a;
+  --color-primary-700: #2f6d3d;
+  --color-primary-800: #285735;
+  --color-primary-900: #21482d;
+  --color-primary-950: #102718;
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root {
+  font-family: var(--font-sans);
+  color: #1c2d22;
+  background: #f7faf6;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --surface: #fff;
+  --surface-soft: #f5faf4;
+  --border: #e4ece3;
+  --text: #1c2d22;
+  --muted: #647468;
+  --green: #38884a;
+  --green-dark: #285735;
+  --green-pale: #eaf5e9;
+  --shadow-card: 0 12px 35px rgba(33, 72, 45, 0.06);
 }
 
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
 html {
+  min-width: 320px;
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f8fafc;
-  color: #1e293b;
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(221, 241, 220, 0.46), transparent 38rem),
+    #f7faf6;
+  color: var(--text);
 }
 
-/* Custom scrollbar */
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-sans);
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+textarea,
+select {
+  font-size: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: #d6edd8;
+  color: #21482d;
+}
+
+*:focus-visible {
+  outline: 3px solid rgba(81, 169, 100, 0.48);
+  outline-offset: 3px;
+}
+
+/* Give the existing utility-based screens a consistent, softer canvas. */
+.bg-slate-50 {
+  background-color: #f7faf6;
+}
+
+.text-slate-800 {
+  color: #1c2d22;
+}
+
+.text-slate-700 {
+  color: #34483a;
+}
+
+.text-slate-600 {
+  color: #647468;
+}
+
+.border-slate-200 {
+  border-color: #e4ece3;
+}
+
+.border-slate-300 {
+  border-color: #d7e2d6;
+}
+
+.bg-primary-600 {
+  background-color: #38884a;
+}
+
+.hover\:bg-primary-700:hover {
+  background-color: #2f6d3d;
+}
+
+.text-primary-600 {
+  color: #38884a;
+}
+
+.text-primary-700 {
+  color: #2f6d3d;
+}
+
+.bg-primary-50 {
+  background-color: #f2faf3;
+}
+
+.bg-primary-100 {
+  background-color: #e4f4e6;
+}
+
+.border-primary-300 {
+  border-color: #a4d9ae;
+}
+
+/* Comfortable defaults for forms shared across registration and profile screens. */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  min-height: 2.9rem;
+  border-color: #d7e2d6;
+  border-radius: 0.8rem;
+  background-color: #fff;
+  color: #1c2d22;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #96a49a;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #78c487;
+  box-shadow: 0 0 0 4px rgba(120, 196, 135, 0.16);
+  outline: none;
+}
+
+label {
+  color: #34483a;
+}
+
+/* Shared surface treatment across dashboards and account forms. */
+.rounded-2xl.border,
+form.rounded-2xl,
+.rounded-2xl.shadow-sm {
+  box-shadow: var(--shadow-card);
+}
+
+footer a,
+nav a,
+button,
+.group {
+  transition-duration: 180ms;
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: float-in 420ms ease-out both;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #f1f6ef;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border-radius: 4px;
+  border: 3px solid #f1f6ef;
+  border-radius: 999px;
+  background: #b7cdb8;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #8eaf91;
 }
 
-/* Focus styles */
-*:focus-visible {
-  outline: 2px solid var(--color-primary-500);
-  outline-offset: 2px;
-}
-
-/* Selection */
-::selection {
-  background-color: var(--color-primary-200);
-  color: var(--color-primary-900);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
