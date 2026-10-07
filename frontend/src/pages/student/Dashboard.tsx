@@ -26,10 +26,10 @@ export default function StudentDashboard() {
   }
 
   const stats = [
-    { label: 'Total Applications', value: applications.length, icon: FileText, color: 'bg-blue-500' },
-    { label: 'Under Review', value: applications.filter((a) => a.status === 'under_review').length, icon: Clock, color: 'bg-yellow-500' },
-    { label: 'Accepted', value: applications.filter((a) => a.status === 'accepted').length, icon: CheckCircle, color: 'bg-green-500' },
-    { label: 'Rejected', value: applications.filter((a) => a.status === 'rejected').length, icon: XCircle, color: 'bg-red-500' },
+    { label: 'Total Applications', value: applications.length, icon: FileText, color: 'bg-sky-100', iconColor: 'text-sky-700' },
+    { label: 'Under Review', value: applications.filter((a) => a.status === 'under_review').length, icon: Clock, color: 'bg-amber-100', iconColor: 'text-amber-700' },
+    { label: 'Accepted', value: applications.filter((a) => a.status === 'accepted').length, icon: CheckCircle, color: 'bg-primary-100', iconColor: 'text-primary-700' },
+    { label: 'Rejected', value: applications.filter((a) => a.status === 'rejected').length, icon: XCircle, color: 'bg-rose-100', iconColor: 'text-rose-700' },
   ]
 
   const getStatusColor = (status: string) => {
@@ -47,7 +47,7 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
+    <div className="workspace-page min-h-screen bg-slate-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -72,7 +72,7 @@ export default function StudentDashboard() {
               className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"
             >
               <div className={`w-10 h-10 ${stat.color} rounded-xl flex items-center justify-center mb-4`}>
-                <stat.icon className="text-white" size={20} />
+                <stat.icon className={stat.iconColor} size={20} />
               </div>
               <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
               <p className="text-sm text-slate-600">{stat.label}</p>

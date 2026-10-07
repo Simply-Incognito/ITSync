@@ -1,20 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Menu, X, LogOut, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getDashboardPath } from '../utils/navigation';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
-
-  const dashboardLink = useMemo(() => {
-    if (!user) return '/login';
-    if (user.role === 'student') return '/student/dashboard';
-    if (user.role === 'organization_representative') return '/organization/dashboard';
-    return '/';
-  }, [user]);
+  const dashboardLink = user ? getDashboardPath(user.role) : '/login';
 
   const handleLogout = () => {
     logout();
@@ -24,7 +19,11 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-primary-100/80 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-3" aria-label="iSIWES home">
+        <Link
+          to={isAuthenticated ? dashboardLink : '/'}
+          className="flex items-center gap-3"
+          aria-label={isAuthenticated ? 'iSIWES dashboard' : 'iSIWES home'}
+        >
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 shadow-sm shadow-primary-200">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
@@ -37,9 +36,11 @@ export default function Navbar() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
-          <Link to="/" className="text-sm font-medium text-slate-600 transition hover:text-primary-700">
-            Home
-          </Link>
+          {!isAuthenticated && (
+            <Link to="/" className="text-sm font-medium text-slate-600 transition hover:text-primary-700">
+              Home
+            </Link>
+          )}
           {isAuthenticated ? (
             <>
               <Link to={dashboardLink} className="text-sm font-medium text-slate-600 transition hover:text-primary-700">
@@ -89,13 +90,15 @@ export default function Navbar() {
             className="overflow-hidden border-t border-primary-100 bg-white md:hidden"
           >
             <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-4">
-              <Link
-                to="/"
-                onClick={() => setMobileOpen(false)}
-                className="rounded-2xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-primary-50 hover:text-primary-700"
-              >
-                Home
-              </Link>
+              {!isAuthenticated && (
+                <Link
+                  to="/"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-2xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-primary-50 hover:text-primary-700"
+                >
+                  Home
+                </Link>
+              )}
               {isAuthenticated ? (
                 <>
                   <Link
