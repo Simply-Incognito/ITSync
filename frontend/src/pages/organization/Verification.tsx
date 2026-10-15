@@ -10,7 +10,15 @@ export default function OrganizationVerification() {
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
   const [uploadingType, setUploadingType] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cacCertificateRef = useRef<HTMLInputElement>(null)
+  const representativeAuthRef = useRef<HTMLInputElement>(null)
+  const proofOfAddressRef = useRef<HTMLInputElement>(null)
+
+  const fileInputRefs: Record<string, React.RefObject<HTMLInputElement | null>> = {
+    cac_certificate: cacCertificateRef,
+    representative_authorization: representativeAuthRef,
+    proof_of_address: proofOfAddressRef,
+  }
 
   useEffect(() => {
     fetchVerificationStatus()
@@ -43,8 +51,9 @@ export default function OrganizationVerification() {
       setMessage(error.message || 'Failed to upload document.')
     } finally {
       setUploadingType(null)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+      const ref = fileInputRefs[docType]
+      if (ref?.current) {
+        ref.current.value = ''
       }
     }
   }
@@ -196,7 +205,7 @@ export default function OrganizationVerification() {
                       ) : (
                         <>
                           <input
-                            ref={fileInputRef}
+                            ref={fileInputRefs[doc.type]}
                             type="file"
                             accept=".pdf,.jpg,.jpeg,.png"
                             onChange={(e) => handleFileSelect(e, doc.type)}
@@ -205,7 +214,7 @@ export default function OrganizationVerification() {
                           />
                           <button
                             onClick={() => {
-                              fileInputRef.current?.click()
+                              fileInputRefs[doc.type]?.current?.click()
                             }}
                             disabled={uploadingType !== null}
                             className="px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-full hover:bg-primary-700 transition-colors disabled:opacity-50"
