@@ -74,10 +74,28 @@ export default function Register() {
           preferredLocations: formData.preferredLocations ? formData.preferredLocations.split(',').map((s) => s.trim()) : undefined,
           skills: formData.skills ? formData.skills.split(',').map((s) => s.trim()) : undefined,
         }
+      } else {
+        data.organization = {
+          legalName: formData.legalName,
+          tradingName: formData.tradingName || undefined,
+          registrationNumber: formData.registrationNumber,
+          industry: formData.industry,
+          description: formData.description,
+          website: formData.website || undefined,
+          representativeName: formData.representativeName,
+          representativeTitle: formData.representativeTitle,
+          address: {
+            street: formData.street,
+            city: formData.city,
+            state: formData.state,
+            country: formData.country,
+            postalCode: formData.postalCode || undefined,
+          },
+        }
       }
 
       await register(data)
-      navigate(role === 'student' ? '/student/dashboard' : '/organization/dashboard')
+      navigate(role === 'student' ? '/student/dashboard' : '/organization/verification')
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.')
     } finally {

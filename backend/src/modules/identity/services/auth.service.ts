@@ -3,6 +3,7 @@ import { AppError } from '../../../errors/app-error.js';
 import { AuthToken } from '../models/auth-token.model.js';
 import { Student, type StudentProfileInput } from '../models/student.model.js';
 import { User, type UserRole } from '../models/user.model.js';
+import { Organization } from '../../organizations/models/organization.model.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { createRawToken, hashToken } from '../utils/tokens.js';
 import type { LoginInput, RegisterInput } from '../validations/auth.validation.js';
@@ -133,11 +134,18 @@ export async function registerAccount(input: RegisterInput) {
   try {
     if (input.role === 'student' && input.student) {
       await Student.create({ userId: user._id, ...input.student });
+    } else if (input.role === 'organization_representative' && input.organization) {
+      await Organization.create({
+        ...input.organization,
+        representativeUserId: user._id,
+        verificationStatus: 'draft',
+      });
     }
     const accessToken = await issueSession(String(user._id));
     return { user: toPublicUser(user), accessToken };
   } catch (error) {
     await Student.deleteOne({ userId: user._id });
+    await Organization.deleteOne({ representativeUserId: user._id });
     await User.deleteOne({ _id: user._id });
     throw error;
   }
