@@ -43,7 +43,13 @@ async function withTransaction<T>(operation: (session: mongoose.ClientSession) =
 
 async function findRepresentativeOrganization(representativeUserId: string) {
   const organization = await Organization.findOne({ representativeUserId });
-  if (!organization) throw notFound();
+  if (!organization) {
+    throw new AppError(
+      'Organization profile not found. Please create your organization profile first.',
+      404,
+      'ORGANIZATION_NOT_FOUND',
+    );
+  }
   return organization;
 }
 
