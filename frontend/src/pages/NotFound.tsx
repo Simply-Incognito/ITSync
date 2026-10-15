@@ -11,7 +11,7 @@ export default function NotFound() {
         className="text-center"
       >
         <h1 className="text-6xl font-bold text-primary-600 mb-4">404</h1>
-        <h2 className="text-2xl font-semibold text-slate-800 mb-2">Page Not Found</h2>
+        <h2 className="text-2xl font-semibold text-slate-800 mb-2">How did you get here?</h2>
         <p className="text-slate-600 mb-8">
           The page you're looking for doesn't exist or has been moved.
         </p>

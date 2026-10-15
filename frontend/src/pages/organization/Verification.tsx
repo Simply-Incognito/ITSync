@@ -122,6 +122,43 @@ export default function OrganizationVerification() {
     )
   }
 
+  if (!organization) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <h1 className="text-3xl font-bold text-slate-800 mb-2">Organization Verification</h1>
+            <p className="text-slate-600 mb-8">Complete verification to start posting opportunities</p>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center">
+                  <AlertCircle className="text-yellow-600" size={32} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-800">Organization Profile Required</h2>
+                  <p className="text-slate-600 mt-2">
+                    You need to create your organization profile before you can upload verification documents.
+                    Please complete your organization profile first.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <a
+                href="/organization/profile"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
+              >
+                Create Organization Profile
+              </a>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    )
+  }
+
   const statusConfig = getStatusConfig(organization?.verificationStatus || 'draft')
   const StatusIcon = statusConfig.icon
 

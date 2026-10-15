@@ -73,7 +73,7 @@ export default function Home() {
               Why Choose ITSync?
             </h2>
             <p className="text-slate-600 max-w-2xl mx-auto">
-              We provide a trusted platform that simplifies the SIWES placement process for everyone.
+              We provide a trusted platform that simplifies the SIWES/IT placement process for everyone.
             </p>
           </motion.div>
 
