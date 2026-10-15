@@ -22,13 +22,13 @@ export default function Navbar() {
         <Link
           to={isAuthenticated ? dashboardLink : '/'}
           className="flex items-center gap-3"
-          aria-label={isAuthenticated ? 'iSIWES dashboard' : 'iSIWES home'}
+          aria-label={isAuthenticated ? 'ITSync dashboard' : 'ITSync home'}
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 shadow-sm shadow-primary-200">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="text-lg font-bold tracking-tight text-slate-900">iSIWES</div>
+            <div className="text-lg font-bold tracking-tight text-slate-900">ITSync</div>
             <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-primary-700">
               Career Launchpad
             </div>
