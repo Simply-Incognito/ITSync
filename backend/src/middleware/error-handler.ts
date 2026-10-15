@@ -8,8 +8,11 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _request, resp
     response.status(400).json({
       error: {
         code: 'VALIDATION_ERROR',
-        message: 'Request validation failed.',
-        issues: error.issues.map(({ path, message }) => ({ path, message })),
+        message: 'Request validation failed. Please check the issues below.',
+        issues: error.issues.map(({ path, message }) => ({
+          path: path.join('.'),
+          message,
+        })),
       },
     });
     return;
