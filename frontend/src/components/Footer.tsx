@@ -10,10 +10,10 @@ export default function Footer() {
               <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">iS</span>
               </div>
-              <span className="font-bold text-xl text-white">iSIWES</span>
+              <span className="font-bold text-xl text-white">ITSync</span>
             </div>
             <p className="text-slate-400 max-w-md">
-              Connecting Nigerian students with industrial training opportunities. 
+              Connecting Nigerian students with industrial training opportunities.
               Building the future of workforce development, one placement at a time.
             </p>
           </div>
@@ -38,7 +38,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-slate-800 mt-8 pt-8 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} iSIWES. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} ITSync. All rights reserved.</p>
         </div>
       </div>
     </footer>

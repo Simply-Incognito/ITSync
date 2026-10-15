@@ -95,7 +95,7 @@ export default function Register() {
       >
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-slate-800">Create Your Account</h1>
-          <p className="text-slate-600 mt-2">Join iSIWES today</p>
+          <p className="text-slate-600 mt-2">Join ITSync today</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -112,11 +112,10 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setRole('student')}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  role === 'student'
+                className={`p-4 rounded-xl border-2 transition-all ${role === 'student'
                     ? 'border-primary-500 bg-primary-50'
                     : 'border-slate-200 hover:border-slate-300'
-                }`}
+                  }`}
               >
                 <GraduationCap className={`mx-auto mb-2 ${role === 'student' ? 'text-primary-600' : 'text-slate-400'}`} size={32} />
                 <span className={`font-medium ${role === 'student' ? 'text-primary-700' : 'text-slate-600'}`}>
@@ -126,11 +125,10 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setRole('organization_representative')}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  role === 'organization_representative'
+                className={`p-4 rounded-xl border-2 transition-all ${role === 'organization_representative'
                     ? 'border-primary-500 bg-primary-50'
                     : 'border-slate-200 hover:border-slate-300'
-                }`}
+                  }`}
               >
                 <Building2 className={`mx-auto mb-2 ${role === 'organization_representative' ? 'text-primary-600' : 'text-slate-400'}`} size={32} />
                 <span className={`font-medium ${role === 'organization_representative' ? 'text-primary-700' : 'text-slate-600'}`}>

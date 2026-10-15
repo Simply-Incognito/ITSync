@@ -39,7 +39,7 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-10"
             >
-              Connecting Nigerian students with verified organizations for meaningful 
+              Connecting Nigerian students with verified organizations for meaningful
               industrial training experiences.
             </motion.p>
             <motion.div
@@ -70,7 +70,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...fadeUp} className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-4">
-              Why Choose iSIWES?
+              Why Choose ITSync?
             </h2>
             <p className="text-slate-600 max-w-2xl mx-auto">
               We provide a trusted platform that simplifies the SIWES placement process for everyone.
@@ -129,7 +129,7 @@ export default function Home() {
               </div>
               <h3 className="text-2xl font-bold text-slate-800 mb-4">For Students</h3>
               <p className="text-slate-600 mb-6">
-                Create your profile, discover opportunities that match your field of study, 
+                Create your profile, discover opportunities that match your field of study,
                 and apply to verified organizations with just a few clicks.
               </p>
               <ul className="space-y-3 mb-8">
@@ -159,7 +159,7 @@ export default function Home() {
               </div>
               <h3 className="text-2xl font-bold text-slate-800 mb-4">For Organizations</h3>
               <p className="text-slate-600 mb-6">
-                Register your organization, get verified, and post SIWES opportunities 
+                Register your organization, get verified, and post SIWES opportunities
                 to find the best students for your team.
               </p>
               <ul className="space-y-3 mb-8">
@@ -193,7 +193,7 @@ export default function Home() {
               Ready to Get Started?
             </h2>
             <p className="text-white/90 text-lg mb-8">
-              Join thousands of students and organizations already using iSIWES.
+              Join thousands of students and organizations already using ITSync.
             </p>
             <Link
               to="/register"

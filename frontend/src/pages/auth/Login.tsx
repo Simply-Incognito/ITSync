@@ -39,7 +39,7 @@ export default function Login() {
       >
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-slate-800">Welcome Back</h1>
-          <p className="text-slate-600 mt-2">Sign in to your iSIWES account</p>
+          <p className="text-slate-600 mt-2">Sign in to your ITSync account</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
