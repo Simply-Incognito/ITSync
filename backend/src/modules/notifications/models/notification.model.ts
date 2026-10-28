@@ -1,4 +1,4 @@
-import { model, Schema } from 'mongoose';
+import { model, Schema, type Types } from 'mongoose';
 
 export interface NotificationDocument {
   _id: Types.ObjectId;
