@@ -1,4 +1,4 @@
-import mongoose, { Types } from 'mongoose';
+import type { Types } from 'mongoose';
 import { User, type UserRole } from '../../identity/models/user.model.js';
 import {
   Organization,
@@ -8,14 +8,12 @@ import {
   Application,
   type ApplicationStatus,
 } from '../../applications/models/application.model.js';
-import { ApplicationReviewEvent } from '../../applications/models/application-review-event.model.js';
 import { Opportunity } from '../../opportunities/models/opportunity.model.js';
-import { OpportunityReviewEvent } from '../../opportunities/models/opportunity-review-event.model.js';
 
 export interface UserManagementFilter {
-  role?: UserRole;
-  status?: 'active' | 'suspended';
-  search?: string;
+  role?: UserRole | undefined;
+  status?: 'active' | 'suspended' | undefined;
+  search?: string | undefined;
 }
 
 export interface UserManagementResult {
@@ -34,8 +32,8 @@ export interface UserManagementResult {
 }
 
 export interface OrganizationManagementFilter {
-  status?: OrganizationStatus;
-  search?: string;
+  status?: OrganizationStatus | undefined;
+  search?: string | undefined;
 }
 
 export interface OrganizationManagementResult {
@@ -153,9 +151,10 @@ export async function getAdministrationDashboardStats(): Promise<AdministrationD
     Opportunity.countDocuments({ status: 'published' }),
   ]);
 
-  const [applicationsByStatus] = await Promise.all([
-    Application.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
-  ]);
+  const applicationsByStatus = await Application.aggregate<{
+    _id: ApplicationStatus;
+    count: number;
+  }>([{ $group: { _id: '$status', count: { $sum: 1 } } }]);
 
   const applicationsByStatusRecord: Record<ApplicationStatus, number> = {
     submitted: 0,
@@ -168,8 +167,8 @@ export async function getAdministrationDashboardStats(): Promise<AdministrationD
     withdrawn: 0,
   } as Record<ApplicationStatus, number>;
 
-  (applicationsByStatus as any[]).forEach((item) => {
-    const status = item._id as ApplicationStatus;
+  applicationsByStatus.forEach((item) => {
+    const status = item._id;
     if (applicationsByStatusRecord[status] !== undefined) {
       applicationsByStatusRecord[status] = item.count;
     }
