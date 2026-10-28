@@ -55,46 +55,58 @@ export default function Register() {
     setIsLoading(true)
 
     try {
-      const data: any = {
+      const credentials = {
         email: formData.email,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
-        role,
       }
 
       if (role === 'student') {
-        data.student = {
-          fullName: formData.fullName,
-          phoneNumber: formData.phoneNumber || undefined,
-          institution: formData.institution || undefined,
-          department: formData.department || undefined,
-          fieldOfStudy: formData.fieldOfStudy || undefined,
-          currentLevel: formData.currentLevel || undefined,
-          expectedDurationWeeks: formData.expectedDurationWeeks ? parseInt(formData.expectedDurationWeeks) : undefined,
-          preferredLocations: formData.preferredLocations ? formData.preferredLocations.split(',').map((s) => s.trim()) : undefined,
-          skills: formData.skills ? formData.skills.split(',').map((s) => s.trim()) : undefined,
-        }
-      } else {
-        data.organization = {
-          legalName: formData.legalName,
-          tradingName: formData.tradingName || undefined,
-          registrationNumber: formData.registrationNumber,
-          industry: formData.industry,
-          description: formData.description,
-          website: formData.website || undefined,
-          representativeName: formData.representativeName,
-          representativeTitle: formData.representativeTitle,
-          address: {
-            street: formData.street,
-            city: formData.city,
-            state: formData.state,
-            country: formData.country,
-            postalCode: formData.postalCode || undefined,
+        await register({
+          ...credentials,
+          role,
+          student: {
+            fullName: formData.fullName,
+            phoneNumber: formData.phoneNumber || undefined,
+            institution: formData.institution || undefined,
+            department: formData.department || undefined,
+            fieldOfStudy: formData.fieldOfStudy || undefined,
+            currentLevel: formData.currentLevel || undefined,
+            expectedDurationWeeks: formData.expectedDurationWeeks
+              ? parseInt(formData.expectedDurationWeeks)
+              : undefined,
+            preferredLocations: formData.preferredLocations
+              ? formData.preferredLocations.split(',').map((value) => value.trim())
+              : undefined,
+            skills: formData.skills
+              ? formData.skills.split(',').map((value) => value.trim())
+              : undefined,
           },
-        }
+        })
+      } else {
+        await register({
+          ...credentials,
+          role,
+          organization: {
+            legalName: formData.legalName,
+            tradingName: formData.tradingName || undefined,
+            registrationNumber: formData.registrationNumber,
+            industry: formData.industry,
+            description: formData.description,
+            website: formData.website || undefined,
+            representativeName: formData.representativeName,
+            representativeTitle: formData.representativeTitle,
+            address: {
+              street: formData.street,
+              city: formData.city,
+              state: formData.state,
+              country: formData.country,
+              postalCode: formData.postalCode || undefined,
+            },
+          },
+        })
       }
 
-      await register(data)
       navigate(role === 'student' ? '/student/dashboard' : '/organization/verification')
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.')
@@ -403,6 +415,18 @@ export default function Register() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Street Address</label>
+                    <input
+                      type="text"
+                      name="street"
+                      value={formData.street}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="12 Example Street"
+                      required
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">City</label>
                     <input
                       type="text"
@@ -423,6 +447,17 @@ export default function Register() {
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Lagos"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Country</label>
+                    <input
+                      type="text"
+                      name="country"
+                      value={formData.country}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       required
                     />
                   </div>
