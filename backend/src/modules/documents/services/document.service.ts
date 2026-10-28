@@ -1,64 +1,50 @@
-import mongoose from 'mongoose';
-import { AppError } from '../../../errors/app-error.js';
-import { OrganizationDocument } from '../../organizations/models/organization-document.model.js';
-import { Student } from '../../identity/models/student.model.js';
-import { Organization } from '../../organizations/models/organization.model.js';
-import { User } from '../../identity/models/user.model.js';
-import { maxOrganizationDocumentBytes } from '../../organizations/utils/document-storage.js';
+import { createHash } from 'node:crypto';
+import { basename } from 'node:path';
+import mongoose, { type Types } from 'mongoose';
 import { fileTypeFromBuffer } from 'file-type';
+import { AppError } from '../../../errors/app-error.js';
+import { Organization } from '../../organizations/models/organization.model.js';
+import {
+  OrganizationDocument,
+  organizationDocumentTypes,
+} from '../../organizations/models/organization-document.model.js';
+import {
+  deleteOrganizationDocument,
+  maxOrganizationDocumentBytes,
+  storeOrganizationDocument,
+} from '../../organizations/utils/document-storage.js';
+
+const acceptedMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+
+export const documentTypes = [...organizationDocumentTypes, 'cv'] as const;
+
+export type DocumentType = (typeof documentTypes)[number];
 
 export interface UploadedDocument {
+  documentId: Types.ObjectId;
   storageId: Types.ObjectId;
   originalName: string;
   contentType: string;
   byteSize: number;
   sha256: string;
-  documentType: string;
+  documentType: DocumentType;
   uploadedBy: Types.ObjectId;
 }
 
-export interface DocumentUploadInput {
-  file: Express.Multer.File;
-  documentType: string;
-  uploadedBy: Types.ObjectId;
-  organizationId?: Types.ObjectId;
+export interface DownloadableDocument {
+  buffer: Buffer;
+  contentType: string;
+  originalName: string;
 }
 
-export async function uploadDocument(
-  input: DocumentUploadInput,
-): Promise<UploadedDocument> {
-  const { file, documentType, uploadedBy, organizationId } = input;
-
-  // Validate document type based on organization or student
-  const isOrganization = !!organizationId;
-  const acceptedDocumentTypes = new Set([
-    'cac_certificate',
-    'cac_status_report',
-    'representative_authorization',
-    'proof_of_address',
-    'other',
-  ]);
-
-  if (!acceptedDocumentTypes.has(documentType)) {
-    throw new AppError(
-      'Invalid document type.',
-      400,
-      'INVALID_DOCUMENT_TYPE',
-    );
-  }
-
-  // Validate file size
+async function validateFile(file: Express.Multer.File) {
   if (file.size < 1 || file.size > maxOrganizationDocumentBytes) {
-    throw new AppError(
-      'Documents must be no larger than 5 MB.',
-      400,
-      'INVALID_DOCUMENT_SIZE',
-    );
+    throw new AppError('Documents must be no larger than 5 MB.', 400, 'INVALID_DOCUMENT_SIZE');
   }
 
-  // Validate file type using file-type library
   const detectedType = await fileTypeFromBuffer(file.buffer);
-  if (!detectedType || !acceptedDocumentTypes.has(detectedType.mime)) {
+
+  if (!detectedType || !acceptedMimeTypes.has(detectedType.mime)) {
     throw new AppError(
       'Only PDF, JPEG, or PNG documents are accepted.',
       400,
@@ -66,171 +52,192 @@ export async function uploadDocument(
     );
   }
 
-  // Determine the bucket and collection based on organization or student
-  let storageId: Types.ObjectId;
-  let documentRecord;
+  return detectedType;
+}
 
-  if (isOrganization) {
-    // For organization documents, use the existing OrganizationDocument model
-    const organization = await Organization.findById(organizationId).select(
-      '_id',
-    ).lean();
+function safeOriginalName(originalName: string) {
+  const name = basename(originalName)
+    .replace(/\p{Cc}/gu, '')
+    .slice(0, 180);
 
-    if (!organization) {
-      throw new AppError('Organization not found.', 404, 'ORGANIZATION_NOT_FOUND');
-    }
-
-    // Check if document already exists for this type
-    const existingDocument = await OrganizationDocument.findOne({
-      organizationId,
-      documentType,
-    }).lean();
-
-    if (existingDocument) {
-      // Delete the old file from GridFS
-      await deleteOrganizationDocument(existingDocument.storageId).catch(
-        () => undefined,
-      );
-    }
-
-    // Store the new document in GridFS
-    const sha256 = createSHA256(file.buffer);
-    const bucket = getOrganizationDocumentBucket();
-    const uploadStream = bucket.openUploadStream(
-      `${documentType}-${uploadedBy.toString().slice(0, 8)}`,
-      {
-        contentType: detectedType.mime,
-        metadata: {
-          organizationId,
-          documentType,
-          uploadedBy,
-          sha256,
-        },
-      },
-    );
-
-    await new Promise<void>((resolve, reject) => {
-      uploadStream.once('error', reject);
-      uploadStream.once('finish', resolve);
-      uploadStream.end(file.buffer);
-    });
-
-    storageId = uploadStream.id as Types.ObjectId;
-
-    // Save metadata to MongoDB
-    documentRecord = await OrganizationDocument.create({
-      organizationId,
-      uploadedBy,
-      documentType,
-      originalName: basename(file.originalname).replace(/\p{Cc}/gu, '').slice(0, 180),
-      contentType: detectedType.mime,
-      byteSize: file.size,
-      sha256,
-      storageId,
-    });
-  } else {
-    // For student documents, we'll store metadata differently
-    // Students can upload CVs and other supporting documents
-    const sha256 = createSHA256(file.buffer);
-    const bucket = getStudentDocumentBucket();
-    const uploadStream = bucket.openUploadStream(
-      `student-${uploadedBy.toString().slice(0, 8)}`,
-      {
-        contentType: detectedType.mime,
-        metadata: {
-          studentId: uploadedBy,
-          documentType,
-          sha256,
-        },
-      },
-    );
-
-    await new Promise<void>((resolve, reject) => {
-      uploadStream.once('error', reject);
-      uploadStream.once('finish', resolve);
-      uploadStream.end(file.buffer);
-    });
-
-    storageId = uploadStream.id as Types.ObjectId;
-
-    // For students, we'll track documents differently - just store the metadata reference
-    // In a full implementation, would create a StudentDocument model
-    documentRecord = {
-      _id: storageId,
-      storageId,
-      documentType,
-      uploadedBy,
-      originalName: basename(file.originalname).replace(/\p{Cc}/gu, '').slice(0, 180),
-      contentType: detectedType.mime,
-      byteSize: file.size,
-      sha256,
-    };
+  if (!name) {
+    throw new AppError('A document filename is required.', 400, 'INVALID_DOCUMENT_NAME');
   }
 
-  return {
-    storageId: documentRecord._id instanceof Types.ObjectId
-      ? documentRecord._id
-      : storageId,
-    originalName: documentRecord.originalName,
-    contentType: documentRecord.contentType,
-    byteSize: documentRecord.byteSize,
-    sha256: documentRecord.sha256,
-    documentType,
-  };
-}
-
-export async function downloadDocument(
-  storageId: Types.ObjectId,
-): Promise<Buffer> {
-  const bucket = getOrganizationDocumentBucket();
-  const downloadStream = bucket.openDownloadStream(storageId);
-
-  const chunks: Buffer[] = [];
-  return new Promise<Buffer>((resolve, reject) => {
-    downloadStream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    downloadStream.on('error', reject);
-    downloadStream.on('end', () => resolve(Buffer.concat(chunks)));
-  });
-}
-
-export async function deleteDocument(
-  storageId: Types.ObjectId,
-  isOrganizationDocument: boolean = true,
-): Promise<void> {
-  if (isOrganizationDocument) {
-    await deleteOrganizationDocument(storageId);
-  } else {
-    const bucket = getStudentDocumentBucket();
-    await bucket.delete(storageId);
-  }
-}
-
-function createSHA256(buffer: Buffer): string {
-  const crypto = require('node:crypto');
-  return crypto.createHash('sha256').update(buffer).digest('hex');
-}
-
-function getOrganizationDocumentBucket() {
-  const database = mongoose.connection.db;
-  if (!database) {
-    throw new AppError('Document storage is unavailable.', 503, 'DOCUMENT_STORAGE_UNAVAILABLE');
-  }
-  return new mongoose.mongo.GridFSBucket(database, { bucketName: 'organization_documents' });
+  return name;
 }
 
 function getStudentDocumentBucket() {
   const database = mongoose.connection.db;
+
   if (!database) {
-    throw new AppError('Document storage is unavailable.', 503, 'DOCUMENT_STORAGE_UNAVAILABLE');
+    throw new AppError(
+      'Document storage is unavailable.',
+      503,
+      'DOCUMENT_STORAGE_UNAVAILABLE',
+    );
   }
+
   return new mongoose.mongo.GridFSBucket(database, { bucketName: 'student_documents' });
 }
 
-function basename(path: string): string {
-  const crypto = require('node:crypto');
-  // Simple basename extraction - in production would use path module
-  const parts = path.replace(/\\/g, '/').split('/');
-  return parts[parts.length - 1];
+async function getOrganizationDocumentBucket() {
+  const database = mongoose.connection.db;
+
+  if (!database) {
+    throw new AppError(
+      'Document storage is unavailable.',
+      503,
+      'DOCUMENT_STORAGE_UNAVAILABLE',
+    );
+  }
+
+  return new mongoose.mongo.GridFSBucket(database, { bucketName: 'organization_documents' });
+}
+
+export async function uploadOrganizationDocument(input: {
+  file: Express.Multer.File;
+  documentType: DocumentType;
+  uploadedBy: Types.ObjectId;
+}): Promise<UploadedDocument> {
+  const { file, documentType, uploadedBy } = input;
+
+  const organization = await Organization.findOne({ representativeUserId: uploadedBy })
+    .select('_id verificationStatus')
+    .lean();
+
+  if (!organization) {
+    throw new AppError(
+      'Organization profile not found. Please create your organization profile first.',
+      404,
+      'ORGANIZATION_NOT_FOUND',
+    );
+  }
+
+  if (!['draft', 'rejected'].includes(organization.verificationStatus)) {
+    throw new AppError(
+      'Documents can only be changed while verification is in draft or rejected status.',
+      409,
+      'VERIFICATION_NOT_EDITABLE',
+    );
+  }
+
+  await validateFile(file);
+
+  const stored = await storeOrganizationDocument(file, {
+    organizationId: String(organization._id),
+    uploadedBy: String(uploadedBy),
+    documentType,
+  });
+
+  try {
+    const record = await OrganizationDocument.create({
+      organizationId: organization._id,
+      uploadedBy,
+      documentType,
+      ...stored,
+    });
+
+    return {
+      documentId: record._id,
+      storageId: record.storageId,
+      originalName: record.originalName,
+      contentType: record.contentType,
+      byteSize: record.byteSize,
+      sha256: record.sha256,
+      documentType,
+      uploadedBy,
+    };
+  } catch (error) {
+    await deleteOrganizationDocument(stored.storageId).catch(() => undefined);
+    throw error;
+  }
+}
+
+export async function uploadStudentDocument(input: {
+  file: Express.Multer.File;
+  documentType: DocumentType;
+  uploadedBy: Types.ObjectId;
+}): Promise<UploadedDocument> {
+  const { file, documentType, uploadedBy } = input;
+
+  const detectedType = await validateFile(file);
+  const originalName = safeOriginalName(file.originalname);
+  const sha256 = createHash('sha256').update(file.buffer).digest('hex');
+  const bucket = getStudentDocumentBucket();
+  const uploadStream = bucket.openUploadStream(originalName, {
+    contentType: detectedType.mime,
+    metadata: {
+      studentId: uploadedBy,
+      documentType,
+      sha256,
+    },
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    uploadStream.once('error', reject);
+    uploadStream.once('finish', resolve);
+    uploadStream.end(file.buffer);
+  });
+
+  const storageId = uploadStream.id as Types.ObjectId;
+
+  return {
+    documentId: storageId,
+    storageId,
+    originalName,
+    contentType: detectedType.mime,
+    byteSize: file.size,
+    sha256,
+    documentType,
+    uploadedBy,
+  };
+}
+
+async function findOrganizationDocumentRecord(storageId: Types.ObjectId) {
+  return OrganizationDocument.findOne({ storageId }).lean();
+}
+
+export async function downloadDocument(
+  documentId: Types.ObjectId,
+): Promise<DownloadableDocument> {
+  const organizationDocument = await findOrganizationDocumentRecord(documentId);
+  const bucket = organizationDocument
+    ? await getOrganizationDocumentBucket()
+    : getStudentDocumentBucket();
+
+  const chunks: Buffer[] = [];
+
+  return new Promise<DownloadableDocument>((resolve, reject) => {
+    const downloadStream = bucket.openDownloadStream(documentId);
+
+    downloadStream.on('data', (chunk: Buffer) => chunks.push(chunk));
+    downloadStream.on('error', () =>
+      reject(new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND')),
+    );
+    downloadStream.on('end', () =>
+      resolve({
+        buffer: Buffer.concat(chunks),
+        contentType: organizationDocument?.contentType ?? 'application/octet-stream',
+        originalName: organizationDocument?.originalName ?? 'document',
+      }),
+    );
+  });
+}
+
+export async function deleteDocument(documentId: Types.ObjectId): Promise<void> {
+  const organizationDocument = await findOrganizationDocumentRecord(documentId);
+
+  if (organizationDocument) {
+    await OrganizationDocument.deleteOne({ _id: organizationDocument._id });
+    await deleteOrganizationDocument(documentId).catch(() => undefined);
+    return;
+  }
+
+  const bucket = getStudentDocumentBucket();
+  await bucket.delete(documentId).catch(() => {
+    throw new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND');
+  });
 }
 
 export { maxOrganizationDocumentBytes };
