@@ -13,9 +13,14 @@ export const applicationStatusSchema = z.enum([
 
 export type ApplicationStatus = z.infer<typeof applicationStatusSchema>;
 
-export const updateApplicationStatusSchema = z.object({
-  status: applicationStatusSchema,
-  reason: z.string().trim().min(5).max(2000).optional(),
-});
+export const updateApplicationStatusSchema = z
+  .object({
+    status: applicationStatusSchema,
+    reason: z.string().trim().min(5).max(2000).optional(),
+  })
+  .refine((input) => input.status !== 'rejected' || Boolean(input.reason), {
+    message: 'A reason is required when rejecting an application.',
+    path: ['reason'],
+  });
 
 export type UpdateApplicationStatusInput = z.infer<typeof updateApplicationStatusSchema>;

@@ -1,6 +1,6 @@
-import mongoose, { Types } from 'mongoose';
+import { Types } from 'mongoose';
 import { AppError } from '../../../errors/app-error.js';
-import { User, type UserRole } from '../../identity/models/user.model.js';
+import { User } from '../../identity/models/user.model.js';
 import { Student } from '../../identity/models/student.model.js';
 import { Organization } from '../../organizations/models/organization.model.js';
 import { Opportunity } from '../../opportunities/models/opportunity.model.js';
@@ -14,11 +14,11 @@ export interface CreateApplicationInput {
 }
 
 export interface ApplicationFilters {
-  status?: ApplicationStatus;
-  studentId?: Types.ObjectId;
-  opportunityId?: Types.ObjectId;
-  page?: number;
-  limit?: number;
+  status?: ApplicationStatus | undefined;
+  studentId?: Types.ObjectId | undefined;
+  opportunityId?: Types.ObjectId | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
 }
 
 export interface PaginatedApplications {
@@ -65,9 +65,9 @@ export async function canApplyForOpportunity(
 
 export async function createApplication(
   input: CreateApplicationInput,
-  studentId: Types.ObjectId,
+  studentId: string,
 ): Promise<unknown> {
-  const { studentId: _, opportunityId, studentDocumentIds } = input;
+  const { opportunityId, studentDocumentIds } = input;
 
   // Check if student exists and has a profile
   const student = await Student.findOne({ userId: studentId }).lean();
@@ -130,9 +130,11 @@ export async function createApplication(
 
   await application.save();
 
-  // Update opportunity's available slots
-  opportunity.availableSlots -= 1;
-  await opportunity.save();
+  // Reserve a slot atomically so concurrent applications cannot oversubscribe.
+  await Opportunity.updateOne(
+    { _id: opportunityId, availableSlots: { $gt: 0 } },
+    { $inc: { availableSlots: -1 } },
+  );
 
   // Create review event
   await ApplicationReviewEvent.create({
@@ -217,7 +219,7 @@ export async function updateApplicationStatus(
   actorUserId: string,
   reason?: string,
 ): Promise<unknown> {
-  const application = await Application.findById(applicationId).lean();
+  const application = await Application.findById(applicationId);
   if (!application) throw new AppError('Application not found.', 404, 'APPLICATION_NOT_FOUND');
 
   // Define valid transitions
