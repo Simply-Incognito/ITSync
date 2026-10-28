@@ -13,7 +13,11 @@ const fadeUp = {
 export default function Home() {
   const { user } = useAuth()
 
-  if (user && user.role !== 'administrator') {
+  if (user?.role === 'administrator') {
+    return <Navigate to="/admin/dashboard" replace />
+  }
+
+  if (user) {
     return <Navigate to={getDashboardPath(user.role)} replace />
   }
 
