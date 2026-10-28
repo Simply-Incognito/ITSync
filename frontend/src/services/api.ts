@@ -1,5 +1,12 @@
 const API_BASE = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/+$/, '')
 
+interface ApiErrorResponse {
+  error?: {
+    message?: string
+    issues?: Array<{ path: Array<string | number>; message: string }>
+  }
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')
   const isFormData = options.body instanceof FormData
@@ -19,8 +26,14 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.error?.message || 'An error occurred')
+    const body = await response.json().catch(() => undefined) as ApiErrorResponse | undefined
+    const issues = body?.error?.issues
+      ?.map(({ path, message }) => `${path.join('.')}: ${message}`)
+      .filter(Boolean)
+    const message = issues?.length
+      ? issues.join(' ')
+      : body?.error?.message || 'An error occurred'
+    throw new Error(message)
   }
 
   if (response.status === 204) {
