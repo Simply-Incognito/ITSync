@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import { AppError } from '../../../errors/app-error.js';
 import { routeParam } from '../../../utils/route-param.js';
 import { requireAuthentication, requireRoles } from '../../identity/middleware/authenticate.js';
-import type { ApplicationStatus } from '../models/application.model.js';
+import { applicationStatuses, type ApplicationStatus } from '../models/application.model.js';
 import {
   createApplication,
   listApplications,
@@ -32,6 +32,18 @@ function parseObjectId(value: string | undefined, message: string, code: string)
 const studentAccess = [requireAuthentication, requireRoles('student')];
 const orgAccess = [requireAuthentication, requireRoles('organization_representative')];
 const adminAccess = [requireAuthentication, requireRoles('administrator')];
+
+function paginationValue(value: unknown, fallback: number, name: string, maximum: number) {
+  if (value === undefined) return fallback;
+  if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) {
+    throw new AppError(`Invalid ${name}.`, 400, 'INVALID_PAGINATION');
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed > maximum) {
+    throw new AppError(`Invalid ${name}.`, 400, 'INVALID_PAGINATION');
+  }
+  return parsed;
+}
 
 applicationRouter.post('/', ...studentAccess, async (request, response) => {
   const identity = requireIdentity(request);
@@ -73,12 +85,19 @@ applicationRouter.get('/my', ...studentAccess, async (request, response) => {
 });
 
 applicationRouter.get('/', ...adminAccess, async (request, response) => {
-  const status =
-    typeof request.query.status === 'string'
-      ? (request.query.status as ApplicationStatus)
-      : undefined;
+  const statusValue = request.query.status;
+  if (
+    statusValue !== undefined &&
+    (typeof statusValue !== 'string' ||
+      !applicationStatuses.includes(statusValue as ApplicationStatus))
+  ) {
+    throw new AppError('Invalid application status.', 400, 'INVALID_APPLICATION_STATUS');
+  }
+  const status = statusValue as ApplicationStatus | undefined;
+  const page = paginationValue(request.query.page, 1, 'page', 100_000);
+  const limit = paginationValue(request.query.limit, 20, 'limit', 100);
 
-  const result = await listApplications({ status }, requireIdentity(request).id);
+  const result = await listApplications({ status, page, limit }, requireIdentity(request).id);
   response.json({ applications: result.applications, pagination: result.pagination });
 });
 

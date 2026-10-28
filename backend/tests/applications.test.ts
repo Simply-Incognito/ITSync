@@ -114,14 +114,32 @@ describe('application routes', () => {
 
     const response = await request(app)
       .get('/api/v1/applications')
-      .query({ status: 'submitted' })
+      .query({ status: 'submitted', page: '2', limit: '5' })
       .set('Authorization', 'Bearer admin-token');
 
     expect(response.status).toBe(200);
     expect(applicationService.listApplications).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'submitted' }),
+      expect.objectContaining({ status: 'submitted', page: 2, limit: 5 }),
       adminId,
     );
+  });
+
+  it('rejects invalid application filters and pagination', async () => {
+    authenticate.mockResolvedValue(adminIdentity);
+
+    const invalidStatus = await request(app)
+      .get('/api/v1/applications')
+      .query({ status: 'invalid' })
+      .set('Authorization', 'Bearer test-token');
+    const invalidLimit = await request(app)
+      .get('/api/v1/applications')
+      .query({ limit: '101' })
+      .set('Authorization', 'Bearer test-token');
+
+    expect(invalidStatus.status).toBe(400);
+    expect(invalidStatus.body.error.code).toBe('INVALID_APPLICATION_STATUS');
+    expect(invalidLimit.status).toBe(400);
+    expect(invalidLimit.body.error.code).toBe('INVALID_PAGINATION');
   });
 
   it('allows an administrator to update application status', async () => {
