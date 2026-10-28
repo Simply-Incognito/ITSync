@@ -27,14 +27,14 @@ studentSchema.index({ userId: 1 }, { unique: true });
 // that can be provided when creating or updating a student profile.
 export interface StudentProfileInput {
   fullName: string;
-  phoneNumber?: string;
-  institution?: string;
-  department?: string;
-  fieldOfStudy?: string;
-  currentLevel?: string;
-  expectedDurationWeeks?: number;
-  preferredLocations?: string[];
-  skills?: string[];
+  phoneNumber?: string | null | undefined;
+  institution?: string | null | undefined;
+  department?: string | null | undefined;
+  fieldOfStudy?: string | null | undefined;
+  currentLevel?: string | null | undefined;
+  expectedDurationWeeks?: number | null | undefined;
+  preferredLocations?: string[] | undefined;
+  skills?: string[] | undefined;
 }
 
 export const Student = model('Student', studentSchema); // Export the Student model for use in other parts of the application

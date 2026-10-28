@@ -1,11 +1,8 @@
-import mongoose, { Types } from 'mongoose';
 import { AppError } from '../../../errors/app-error.js';
 import { Application } from '../../applications/models/application.model.js';
 import { ApplicationReviewEvent } from '../../applications/models/application-review-event.model.js';
 import { Opportunity } from '../../opportunities/models/opportunity.model.js';
-import { Student } from '../../identity/models/student.model.js';
 import { Organization } from '../../organizations/models/organization.model.js';
-import { User } from '../../identity/models/user.model.js';
 
 export interface StudentDashboardData {
   activeApplications: unknown[];

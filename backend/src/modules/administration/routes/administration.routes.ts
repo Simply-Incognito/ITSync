@@ -11,6 +11,8 @@ import {
   getUserManagement,
   getOrganizationManagement,
   getAdministrationDashboardStats,
+  type UserManagementFilter,
+  type OrganizationManagementFilter,
 } from '../services/administration.service.js';
 import { AdministrationLog } from '../models/administration.model.js';
 
@@ -23,9 +25,11 @@ administrationRouter.get('/users', ...adminAccess, async (request, response) => 
   const limit = Number(request.query.limit) || 20;
   const search = request.query.search as string | undefined;
 
-  const filters: { role?: string; status?: string; search?: string } = {};
-  if (request.query.role) filters.role = request.query.role as UserRole;
-  if (request.query.status) filters.status = request.query.status as 'active' | 'suspended';
+  const filters: UserManagementFilter = {};
+  if (typeof request.query.role === 'string') filters.role = request.query.role as UserRole;
+  if (request.query.status === 'active' || request.query.status === 'suspended') {
+    filters.status = request.query.status;
+  }
   if (search) filters.search = search;
 
   const result = await getUserManagement(filters, page, limit);
@@ -37,7 +41,7 @@ administrationRouter.get('/organizations', ...adminAccess, async (request, respo
   const limit = Number(request.query.limit) || 20;
   const status = request.query.status as OrganizationStatus | undefined;
 
-  const filters: { status?: OrganizationStatus } = {};
+  const filters: OrganizationManagementFilter = {};
   if (status) filters.status = status;
 
   const result = await getOrganizationManagement(filters, page, limit);

@@ -1,5 +1,6 @@
 import { Router, type Request } from 'express';
 import { AppError } from '../../../errors/app-error.js';
+import { routeParam } from '../../../utils/route-param.js';
 import { requireAuthentication, requireRoles } from '../../identity/middleware/authenticate.js';
 import {
   getStudentDashboard,
@@ -32,10 +33,8 @@ applicationTrackingRouter.get(
   '/organization/me',
   ...orgAccess,
   async (request, response) => {
-    const dashboard = await getOrganizationDashboard(
-      request.identity.id,
-      requireIdentity(request),
-    );
+    const identity = requireIdentity(request);
+    const dashboard = await getOrganizationDashboard(identity.id, identity);
     response.json({ dashboard });
   },
 );
@@ -44,7 +43,10 @@ applicationTrackingRouter.get(
   '/:applicationId',
   ...adminAccess,
   async (request, response) => {
-    const { applicationId } = request.params;
+    const applicationId = routeParam(request, 'applicationId', {
+      code: 'APPLICATION_NOT_FOUND',
+      message: 'Application was not found.',
+    });
     const result = await getApplicationReview(applicationId);
     response.json(result);
   },
@@ -54,7 +56,10 @@ applicationTrackingRouter.get(
   '/:applicationId/history',
   ...adminAccess,
   async (request, response) => {
-    const { applicationId } = request.params;
+    const applicationId = routeParam(request, 'applicationId', {
+      code: 'APPLICATION_NOT_FOUND',
+      message: 'Application was not found.',
+    });
     const history = await getApplicationStatusHistory(applicationId);
     response.json({ history });
   },

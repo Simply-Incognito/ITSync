@@ -64,7 +64,7 @@ describe('opportunity moderation service', () => {
         expect(events[0]).toMatchObject({
             opportunityId,
             organizationId,
-            actorUserId: administratorId,
+            actorUserId: new mongoose.Types.ObjectId(administratorId),
             action: 'approved',
             fromStatus: 'pending_review',
             toStatus: 'published',

@@ -15,7 +15,10 @@ vi.mock('../src/modules/identity/services/auth.service.js', () => ({ authenticat
 vi.mock('../src/modules/students/services/student.service.js', () => studentService);
 
 import { createApp } from '../src/app.js';
-import { studentProfileCreateSchema } from '../src/modules/students/validations/student.validation.js';
+import {
+  studentProfileCreateSchema,
+  studentProfileUpdateSchema,
+} from '../src/modules/students/validations/student.validation.js';
 
 const app = createApp();
 

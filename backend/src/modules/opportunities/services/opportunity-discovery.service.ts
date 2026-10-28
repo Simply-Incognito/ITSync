@@ -1,16 +1,15 @@
-import { Types } from 'mongoose';
 import { Organization } from '../../organizations/models/organization.model.js';
 import { Opportunity } from '../models/opportunity.model.js';
 
 export interface OpportunitySearchFilters {
-  search?: string;
-  fieldOfStudy?: string;
-  industry?: string;
-  location?: string;
-  durationWeeks?: number;
-  workArrangement?: 'onsite' | 'hybrid' | 'remote';
-  page?: number;
-  limit?: number;
+  search?: string | undefined;
+  fieldOfStudy?: string | undefined;
+  industry?: string | undefined;
+  location?: string | undefined;
+  durationWeeks?: number | undefined;
+  workArrangement?: 'onsite' | 'hybrid' | 'remote' | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
 }
 
 export interface PaginatedOpportunities {
@@ -120,7 +119,7 @@ export async function getOpportunityFilters() {
     Opportunity.aggregate([
       {
         $match: {
-          organizationId: { $in: verifiedOrganizationIds.map((id) => new Types.ObjectId(id)) },
+          organizationId: { $in: verifiedOrganizationIds },
           status: 'published',
           applicationDeadline: { $gt: new Date() },
         },
