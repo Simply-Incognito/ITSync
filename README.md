@@ -1,4 +1,4 @@
-# iSIWES Platform — Product Requirements Document
+# ITSync Platform — Product Requirements Document
 
 **Version:** 1.0  
 **Created:** September 26, 2026  
@@ -9,7 +9,7 @@
 
 ## 1. Product Overview
 
-iSIWES is a web-based platform intended to make it easier for Nigerian tertiary students to discover and apply for suitable SIWES/Industrial Training opportunities.
+ITSync is a web-based platform intended to make it easier for Nigerian tertiary students to discover and apply for suitable SIWES/Industrial Training opportunities.
 
 The platform will provide a centralized marketplace where students can discover placement opportunities based on factors such as field of study, location, duration, and requirements.
 
@@ -46,7 +46,7 @@ The initial product assumptions will be validated through student surveys, inter
 
 ## 4. Goals and Objectives
 
-The initial goals of iSIWES are to:
+The initial goals of ITSync are to:
 
 - Centralize SIWES placement opportunities in a searchable platform.
 - Make relevant opportunities easier for students to discover.
@@ -459,7 +459,7 @@ The backend shall:
 
 ## 9.1 Architectural Style
 
-iSIWES will initially use a:
+ITSync will initially use a:
 
 > **Modular Monolith implemented using Clean Architecture.**
 
@@ -653,7 +653,7 @@ Direct integration with university systems is considered a future capability rat
 
 What is the most reliable and practical method for verifying that a student is currently enrolled in an institution?
 
-How can iSIWES securely verify student enrollment using institution-provided data, institutional email, matriculation numbers, or future university integrations?
+How can ITSync securely verify student enrollment using institution-provided data, institutional email, matriculation numbers, or future university integrations?
 
 ## Organization Verification
 
