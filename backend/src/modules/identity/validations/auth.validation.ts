@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { organizationProfileSchema } from '../../organizations/validations/organization.validation.js';
 import { userRoles } from '../models/user.model.js';
 
 const studentRegistrationSchema = z.object({
@@ -13,25 +14,6 @@ const studentRegistrationSchema = z.object({
   skills: z.array(z.string().trim().min(1).max(80)).max(40).optional(),
 });
 
-const organizationRegistrationSchema = z.object({
-  legalName: z.string().trim().min(2).max(200),
-  tradingName: z.string().trim().min(2).max(200).optional(),
-  registrationCountry: z.string().trim().length(2).default('NG'),
-  registrationNumber: z.string().trim().min(3).max(80),
-  industry: z.string().trim().min(2).max(120),
-  description: z.string().trim().min(20).max(3000),
-  website: z.union([z.url().max(300), z.literal('')]).optional(),
-  representativeName: z.string().trim().min(2).max(160),
-  representativeTitle: z.string().trim().min(2).max(120),
-  address: z.object({
-    street: z.string().trim().min(3).max(200),
-    city: z.string().trim().min(2).max(120),
-    state: z.string().trim().min(2).max(120),
-    country: z.string().trim().min(2).max(120),
-    postalCode: z.string().trim().max(30).optional(),
-  }),
-});
-
 export const registerSchema = z
   .object({
     email: z.email().max(254),
@@ -44,7 +26,7 @@ export const registerSchema = z
       ],
     ),
     student: studentRegistrationSchema.optional(),
-    organization: organizationRegistrationSchema.optional(),
+    organization: organizationProfileSchema.optional(),
   })
   .refine((input) => input.role !== 'student' || input.student !== undefined, {
     message: 'Student profile details are required for student accounts.',

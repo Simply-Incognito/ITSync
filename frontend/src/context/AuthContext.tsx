@@ -34,23 +34,48 @@ interface AuthContextType {
   updateProfile: (data: Partial<StudentProfile>) => Promise<void>
 }
 
-interface RegisterData {
+interface RegistrationCredentials {
   email: string
   password: string
   confirmPassword: string
-  role: 'student' | 'organization_representative'
-  student?: {
-    fullName: string
-    phoneNumber?: string
-    institution?: string
-    department?: string
-    fieldOfStudy?: string
-    currentLevel?: string
-    expectedDurationWeeks?: number
-    preferredLocations?: string[]
-    skills?: string[]
+}
+
+interface StudentRegistration {
+  fullName: string
+  phoneNumber?: string
+  institution?: string
+  department?: string
+  fieldOfStudy?: string
+  currentLevel?: string
+  expectedDurationWeeks?: number
+  preferredLocations?: string[]
+  skills?: string[]
+}
+
+interface OrganizationRegistration {
+  legalName: string
+  tradingName?: string
+  registrationCountry?: string
+  registrationNumber: string
+  industry: string
+  description: string
+  website?: string
+  representativeName: string
+  representativeTitle: string
+  address: {
+    street: string
+    city: string
+    state: string
+    country: string
+    postalCode?: string
   }
 }
+
+type RegisterData = RegistrationCredentials &
+  (
+    | { role: 'student'; student: StudentRegistration }
+    | { role: 'organization_representative'; organization: OrganizationRegistration }
+  )
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
