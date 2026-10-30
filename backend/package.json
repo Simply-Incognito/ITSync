@@ -26,7 +26,6 @@
     "express-rate-limit": "^8.7.2",
     "file-type": "^22.1.1",
     "helmet": "^8.1.0",
-    "mongodb": "^6.21.0",
     "mongoose": "^8.19.1",
     "multer": "^2.4.0",
     "nodemailer": "^10.0.12",
