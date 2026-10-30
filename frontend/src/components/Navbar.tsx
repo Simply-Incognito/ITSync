@@ -35,9 +35,9 @@ export default function Navbar() {
           </div>
           <div>
             <div className="text-lg font-bold tracking-tight text-slate-900">ITSync</div>
-            <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-primary-700">
+            {/* <div className="text-[10px] font-medium uppercase tracking-[0.22em] text-primary-700">
               Career Launchpad
-            </div>
+            </div> */}
           </div>
         </Link>
 

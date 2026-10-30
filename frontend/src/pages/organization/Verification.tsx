@@ -1,20 +1,45 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Shield, CheckCircle, Clock, XCircle, FileText, Upload, AlertCircle } from 'lucide-react'
+import {
+  Shield,
+  CheckCircle,
+  Clock,
+  XCircle,
+  FileText,
+  Upload,
+  AlertCircle,
+  type LucideIcon,
+} from 'lucide-react'
 import { organizationApi } from '../../services/api'
+import type { Organization, OrganizationDocument, OrganizationDocumentType } from '../../types/domain'
+import { getErrorMessage } from '../../utils/errors'
+
+interface RequiredDocument {
+  type: OrganizationDocumentType
+  label: string
+}
+
+const requiredDocuments: RequiredDocument[] = [
+  { type: 'cac_certificate', label: 'CAC Certificate' },
+  { type: 'representative_authorization', label: 'Representative Authorization' },
+  { type: 'proof_of_address', label: 'Proof of Address' },
+]
 
 export default function OrganizationVerification() {
-  const [organization, setOrganization] = useState<any>(null)
-  const [documents, setDocuments] = useState<any[]>([])
+  const [organization, setOrganization] = useState<Organization | null>(null)
+  const [documents, setDocuments] = useState<OrganizationDocument[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
-  const [uploadingType, setUploadingType] = useState<string | null>(null)
+  const [uploadingType, setUploadingType] = useState<OrganizationDocumentType | null>(null)
   const cacCertificateRef = useRef<HTMLInputElement>(null)
   const representativeAuthRef = useRef<HTMLInputElement>(null)
   const proofOfAddressRef = useRef<HTMLInputElement>(null)
 
-  const fileInputRefs: Record<string, React.RefObject<HTMLInputElement | null>> = {
+  const fileInputRefs: Partial<
+    Record<OrganizationDocumentType, React.RefObject<HTMLInputElement | null>>
+  > = {
     cac_certificate: cacCertificateRef,
     representative_authorization: representativeAuthRef,
     proof_of_address: proofOfAddressRef,
@@ -36,7 +61,10 @@ export default function OrganizationVerification() {
     }
   }
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, docType: string) => {
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    docType: OrganizationDocumentType,
+  ) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -46,12 +74,12 @@ export default function OrganizationVerification() {
     try {
       await organizationApi.uploadDocument(file, docType)
       setMessage('Document uploaded successfully!')
-      fetchVerificationStatus()
-    } catch (error: any) {
-      setMessage(error.message || 'Failed to upload document.')
+      void fetchVerificationStatus()
+    } catch (error) {
+      setMessage(getErrorMessage(error, 'Failed to upload document.'))
     } finally {
       setUploadingType(null)
-      const ref = fileInputRefs[docType]
+      const ref = fileInputRefs[docType as RequiredDocument['type']]
       if (ref?.current) {
         ref.current.value = ''
       }
