@@ -9,6 +9,7 @@ export default function OrganizationDashboard() {
   const [opportunities, setOpportunities] = useState<any[]>([])
   const [applications, setApplications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [dataError, setDataError] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -16,16 +17,27 @@ export default function OrganizationDashboard() {
 
   const fetchData = async () => {
     try {
-      const [orgResponse, oppResponse, appResponse] = await Promise.all([
-        organizationApi.getProfile(),
-        opportunityApi.listMy(),
-        applicationApi.listAll(),
-      ])
+      const orgResponse = await organizationApi.getProfile()
       setOrganization(orgResponse.organization)
-      setOpportunities(oppResponse.opportunities)
-      setApplications(appResponse.applications)
+      const [opportunitiesResult, applicationsResult] = await Promise.allSettled([
+        orgResponse.organization.verificationStatus === 'verified'
+          ? opportunityApi.listMy()
+          : Promise.resolve({ opportunities: [] }),
+        applicationApi.listForOrganization(),
+      ])
+      if (opportunitiesResult.status === 'fulfilled') {
+        setOpportunities(opportunitiesResult.value.opportunities)
+      } else {
+        throw opportunitiesResult.reason
+      }
+      if (applicationsResult.status === 'fulfilled') {
+        setApplications(applicationsResult.value.applications)
+      } else {
+        throw applicationsResult.reason
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error)
+      setDataError(error instanceof Error ? error.message : 'Unable to load organization data.')
     } finally {
       setLoading(false)
     }
@@ -74,8 +86,14 @@ export default function OrganizationDashboard() {
           </div>
         </motion.div>
 
+        {dataError && (
+          <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {dataError}
+          </div>
+        )}
+
         {/* Verification Status */}
-        {organization?.verificationStatus !== 'verified' && (
+        {organization && organization.verificationStatus !== 'verified' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -94,7 +112,9 @@ export default function OrganizationDashboard() {
                 to="/organization/verification"
                 className="px-4 py-2 bg-yellow-600 text-white font-semibold rounded-xl hover:bg-yellow-700 transition-colors"
               >
-                Complete Verification
+                {organization.verificationStatus === 'pending'
+                  ? 'View Verification Status'
+                  : 'Complete Verification'}
               </Link>
             </div>
           </motion.div>

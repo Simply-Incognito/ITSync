@@ -161,13 +161,18 @@ export default function OrganizationVerification() {
 
   const statusConfig = getStatusConfig(organization?.verificationStatus || 'draft')
   const StatusIcon = statusConfig.icon
+  const isVerified = organization.verificationStatus === 'verified'
 
   return (
     <div className="workspace-page min-h-screen bg-slate-50 py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Organization Verification</h1>
-          <p className="text-slate-600 mb-8">Complete verification to start posting opportunities</p>
+          <p className="text-slate-600 mb-8">
+            {isVerified
+              ? 'Your organization is verified and can post opportunities.'
+              : 'Complete verification to start posting opportunities'}
+          </p>
 
           {message && (
             <div className={`mb-6 p-4 rounded-xl ${message.includes('success') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
@@ -201,71 +206,73 @@ export default function OrganizationVerification() {
           </div>
 
           {/* Required Documents */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <FileText size={20} className="text-primary-600" />
-              Required Documents
-            </h2>
-            <p className="text-slate-600 mb-6">
-              Please upload the following documents to complete your verification:
-            </p>
-            <div className="space-y-4">
-              {[
-                { type: 'cac_certificate', label: 'CAC Certificate', required: true },
-                { type: 'representative_authorization', label: 'Representative Authorization', required: true },
-                { type: 'proof_of_address', label: 'Proof of Address', required: true },
-              ].map((doc) => {
-                const uploaded = documents.find((d) => d.documentType === doc.type)
-                return (
-                  <div
-                    key={doc.type}
-                    className="flex items-center justify-between p-4 border border-slate-200 rounded-xl"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      {uploaded ? (
-                        <CheckCircle className="text-green-500" size={24} />
-                      ) : (
-                        <Upload className="text-slate-400" size={24} />
-                      )}
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-800">{doc.label}</p>
-                        {uploaded && (
-                          <p className="text-sm text-slate-500">{uploaded.originalName}</p>
+          {!isVerified && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
+              <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <FileText size={20} className="text-primary-600" />
+                Required Documents
+              </h2>
+              <p className="text-slate-600 mb-6">
+                Please upload the following documents to complete your verification:
+              </p>
+              <div className="space-y-4">
+                {[
+                  { type: 'cac_certificate', label: 'CAC Certificate', required: true },
+                  { type: 'representative_authorization', label: 'Representative Authorization', required: true },
+                  { type: 'proof_of_address', label: 'Proof of Address', required: true },
+                ].map((doc) => {
+                  const uploaded = documents.find((d) => d.documentType === doc.type)
+                  return (
+                    <div
+                      key={doc.type}
+                      className="flex items-center justify-between p-4 border border-slate-200 rounded-xl"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        {uploaded ? (
+                          <CheckCircle className="text-green-500" size={24} />
+                        ) : (
+                          <Upload className="text-slate-400" size={24} />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-800">{doc.label}</p>
+                          {uploaded && (
+                            <p className="text-sm text-slate-500">{uploaded.originalName}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {uploaded ? (
+                          <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            Uploaded
+                          </span>
+                        ) : (
+                          <>
+                            <input
+                              ref={fileInputRefs[doc.type]}
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => handleFileSelect(e, doc.type)}
+                              className="hidden"
+                              disabled={uploadingType !== null}
+                            />
+                            <button
+                              onClick={() => {
+                                fileInputRefs[doc.type]?.current?.click()
+                              }}
+                              disabled={uploadingType !== null}
+                              className="px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-full hover:bg-primary-700 transition-colors disabled:opacity-50"
+                            >
+                              {uploadingType === doc.type ? 'Uploading...' : 'Upload'}
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {uploaded ? (
-                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                          Uploaded
-                        </span>
-                      ) : (
-                        <>
-                          <input
-                            ref={fileInputRefs[doc.type]}
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => handleFileSelect(e, doc.type)}
-                            className="hidden"
-                            disabled={uploadingType !== null}
-                          />
-                          <button
-                            onClick={() => {
-                              fileInputRefs[doc.type]?.current?.click()
-                            }}
-                            disabled={uploadingType !== null}
-                            className="px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-full hover:bg-primary-700 transition-colors disabled:opacity-50"
-                          >
-                            {uploadingType === doc.type ? 'Uploading...' : 'Upload'}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Submit Button */}
           {organization?.verificationStatus === 'draft' || organization?.verificationStatus === 'rejected' ? (
