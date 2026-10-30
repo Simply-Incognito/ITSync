@@ -238,6 +238,18 @@ export const authApi = {
       body: JSON.stringify(data),
     }),
 
+  forgotPassword: (email: string) =>
+    request<{ message?: string; resetToken?: string }>('/auth/password/forgot', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, password: string, confirmPassword: string) =>
+    request<{ message?: string }>('/auth/password/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token, password, confirmPassword }),
+    }),
+
   getCurrentUser: () =>
     request<{ user: any; student: any }>('/auth/me'),
 

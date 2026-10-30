@@ -7,6 +7,8 @@ import AdminLayout from './components/admin/AdminLayout'
 import Home from './pages/Home'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import ResetPassword from './pages/auth/ResetPassword'
 import StudentDashboard from './pages/student/Dashboard'
 import StudentProfile from './pages/student/Profile'
 import StudentOpportunities from './pages/student/Opportunities'
@@ -41,6 +43,8 @@ export default function App() {
           <Route index element={<Home />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
           <Route path="student">
             <Route path="dashboard" element={<StudentDashboard />} />
             <Route path="profile" element={<StudentProfile />} />
