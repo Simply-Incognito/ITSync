@@ -194,22 +194,51 @@ export async function uploadStudentDocument(input: {
   };
 }
 
-async function findOrganizationDocumentRecord(storageId: Types.ObjectId) {
-  return OrganizationDocument.findOne({ storageId }).lean();
+async function findOrganizationDocumentRecord(documentId: Types.ObjectId) {
+  // Callers may hold either the database record id or the GridFS storage id.
+  // Resolve both so a lookup can never fall through to the wrong bucket.
+  return OrganizationDocument.findOne({
+    $or: [{ _id: documentId }, { storageId: documentId }],
+  }).lean();
+}
+
+async function findDocumentOwnedBy(
+  documentId: Types.ObjectId,
+  representativeUserId: Types.ObjectId,
+) {
+  const record = await findOrganizationDocumentRecord(documentId);
+
+  if (!record) {
+    throw new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND');
+  }
+
+  const organization = await Organization.findOne({
+    _id: record.organizationId,
+    representativeUserId,
+  })
+    .select('_id')
+    .lean();
+
+  if (!organization) {
+    // Respond as if the document does not exist so ids belonging to other
+    // organizations cannot be probed for existence.
+    throw new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND');
+  }
+
+  return record;
 }
 
 export async function downloadDocument(
   documentId: Types.ObjectId,
+  representativeUserId: Types.ObjectId,
 ): Promise<DownloadableDocument> {
-  const organizationDocument = await findOrganizationDocumentRecord(documentId);
-  const bucket = organizationDocument
-    ? await getOrganizationDocumentBucket()
-    : getStudentDocumentBucket();
+  const record = await findDocumentOwnedBy(documentId, representativeUserId);
+  const bucket = await getOrganizationDocumentBucket();
 
   const chunks: Buffer[] = [];
 
   return new Promise<DownloadableDocument>((resolve, reject) => {
-    const downloadStream = bucket.openDownloadStream(documentId);
+    const downloadStream = bucket.openDownloadStream(record.storageId);
 
     downloadStream.on('data', (chunk: Buffer) => chunks.push(chunk));
     downloadStream.on('error', () =>
@@ -218,26 +247,21 @@ export async function downloadDocument(
     downloadStream.on('end', () =>
       resolve({
         buffer: Buffer.concat(chunks),
-        contentType: organizationDocument?.contentType ?? 'application/octet-stream',
-        originalName: organizationDocument?.originalName ?? 'document',
+        contentType: record.contentType,
+        originalName: record.originalName,
       }),
     );
   });
 }
 
-export async function deleteDocument(documentId: Types.ObjectId): Promise<void> {
-  const organizationDocument = await findOrganizationDocumentRecord(documentId);
+export async function deleteDocument(
+  documentId: Types.ObjectId,
+  representativeUserId: Types.ObjectId,
+): Promise<void> {
+  const record = await findDocumentOwnedBy(documentId, representativeUserId);
 
-  if (organizationDocument) {
-    await OrganizationDocument.deleteOne({ _id: organizationDocument._id });
-    await deleteOrganizationDocument(documentId).catch(() => undefined);
-    return;
-  }
-
-  const bucket = getStudentDocumentBucket();
-  await bucket.delete(documentId).catch(() => {
-    throw new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND');
-  });
+  await OrganizationDocument.deleteOne({ _id: record._id });
+  await deleteOrganizationDocument(record.storageId).catch(() => undefined);
 }
 
 export { maxOrganizationDocumentBytes };
