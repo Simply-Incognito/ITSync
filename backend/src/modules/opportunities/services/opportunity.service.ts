@@ -58,6 +58,7 @@ export async function createOpportunity(
           opportunityId: opportunity._id,
           organizationId: opportunity.organizationId,
           actorUserId: parseId(actorUserId),
+          action: 'created',
           toStatus: 'draft',
           note: 'Opportunity created.',
         },
