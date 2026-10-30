@@ -279,6 +279,8 @@ export const applicationApi = {
     const query = params ? `?${new URLSearchParams(params).toString()}` : ''
     return request<{ applications: any[]; pagination: any }>(`/applications${query}`)
   },
+  listForOrganization: () =>
+    request<{ applications: any[]; pagination: any }>('/applications/organization/me'),
   updateStatus: (id: string, data: any) =>
     request<{ application: any }>(`/applications/${id}/status`, {
       method: 'PATCH',

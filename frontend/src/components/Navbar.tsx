@@ -1,15 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Menu, X, LogOut, Sparkles } from 'lucide-react';
+import { Menu, X, LogOut, Sparkles, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getDashboardPath } from '../utils/navigation';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const navigate = useNavigate();
   const dashboardLink = user ? getDashboardPath(user.role) : '/login';
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = isDarkMode ? 'dark' : 'light';
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
 
   const handleLogout = () => {
     logout();
@@ -70,14 +76,25 @@ export default function Navbar() {
           )}
         </nav>
 
-        <button
-          type="button"
-          onClick={() => setMobileOpen((current) => !current)}
-          className="inline-flex items-center justify-center rounded-full border border-primary-100 bg-white p-2.5 text-slate-700 transition hover:border-primary-200 hover:text-primary-700 md:hidden"
-          aria-label="Toggle navigation"
-        >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsDarkMode((current) => !current)}
+            className="inline-flex items-center justify-center rounded-full border border-primary-100 bg-white p-2.5 text-slate-700 transition hover:border-primary-200 hover:text-primary-700"
+            aria-label={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
+            aria-pressed={isDarkMode}
+          >
+            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileOpen((current) => !current)}
+            className="inline-flex items-center justify-center rounded-full border border-primary-100 bg-white p-2.5 text-slate-700 transition hover:border-primary-200 hover:text-primary-700 md:hidden"
+            aria-label="Toggle navigation"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
