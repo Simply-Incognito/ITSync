@@ -1,6 +1,7 @@
 import { model, Schema } from 'mongoose';
 
 export const opportunityReviewActions = [
+  'created',
   'submitted',
   'approved',
   'rejected',
