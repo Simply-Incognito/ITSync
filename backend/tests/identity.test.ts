@@ -188,11 +188,14 @@ describe('password reset links', () => {
     const link = buildPasswordResetLink(token);
     const email = buildPasswordResetEmail('student@example.com', link);
 
-    expect(link).toBe('http://localhost:3000/api/v1/auth/password/reset/reset-token-123');
+    const url = new URL(link);
+
+    expect(url.pathname).toBe('/reset-password');
+    expect(url.searchParams.get('token')).toBe(token);
     expect(email.subject).toContain('Reset your iSIWES password');
-    expect(email.text).toContain('/api/v1/auth/password/reset/reset-token-123');
+    expect(email.text).toContain('/reset-password?token=reset-token-123');
     expect(email.text).toContain('10 minutes');
-    expect(email.html).toContain('/auth/password/reset/reset-token-123');
+    expect(email.html).toContain('/reset-password?token=reset-token-123');
     expect(email.html).toContain('10 minutes');
   });
 });
