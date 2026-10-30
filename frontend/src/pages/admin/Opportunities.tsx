@@ -193,6 +193,36 @@ export default function AdminOpportunities() {
                   {opportunity.description}
                 </p>
               )}
+              <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                {opportunity.fieldOfStudy && <p><strong>Field of study:</strong> {opportunity.fieldOfStudy}</p>}
+                {opportunity.workArrangement && <p><strong>Work arrangement:</strong> {opportunity.workArrangement}</p>}
+                {opportunity.durationWeeks && <p><strong>Duration:</strong> {opportunity.durationWeeks} weeks</p>}
+                {opportunity.availableSlots !== undefined && <p><strong>Available slots:</strong> {opportunity.availableSlots}</p>}
+                {opportunity.requiredSkills && opportunity.requiredSkills.length > 0 && (
+                  <p><strong>Required skills:</strong> {opportunity.requiredSkills.join(", ")}</p>
+                )}
+              </div>
+              {opportunity.academicRequirements && (
+                <p className="mt-3 whitespace-pre-line text-sm text-slate-600">
+                  <strong>Academic requirements:</strong> {opportunity.academicRequirements}
+                </p>
+              )}
+              {opportunity.requiredDocuments && opportunity.requiredDocuments.length > 0 && (
+                <p className="mt-3 text-sm text-slate-600">
+                  <strong>Required documents:</strong> {opportunity.requiredDocuments.join(", ")}
+                </p>
+              )}
+              {opportunity.additionalRequirements && (
+                <p className="mt-3 whitespace-pre-line text-sm text-slate-600">
+                  <strong>Additional requirements:</strong> {opportunity.additionalRequirements}
+                </p>
+              )}
+              {opportunity.status === "rejected" && opportunity.reviewNote && (
+                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
+                  <p className="text-sm font-semibold text-rose-800">Rejection feedback sent to the organization</p>
+                  <p className="mt-1 whitespace-pre-line text-sm text-rose-700">{opportunity.reviewNote}</p>
+                </div>
+              )}
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
                 <p className="text-xs text-slate-500">
                   Application deadline:{" "}

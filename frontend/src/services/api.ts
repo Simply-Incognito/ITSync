@@ -73,11 +73,20 @@ export type AdminOpportunity = {
   _id: string
   title: string
   description?: string
+  fieldOfStudy?: string
+  requiredSkills?: string[]
+  academicRequirements?: string
   status: 'draft' | 'pending_review' | 'published' | 'rejected' | 'closed' | 'suspended'
   organizationId: string | { _id: string; legalName?: string } | null
   location: { city: string; state: string; country: string }
+  workArrangement?: 'onsite' | 'hybrid' | 'remote'
+  durationWeeks?: number
+  availableSlots?: number
   applicationDeadline: string
+  requiredDocuments?: string[]
+  additionalRequirements?: string
   createdAt: string
+  reviewNote?: string | null
 }
 
 export type OrganizationReviewProfile = {
@@ -259,6 +268,11 @@ export const opportunityApi = {
   create: (data: any) =>
     request<{ opportunity: any }>('/opportunities/me', {
       method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: string, data: any) =>
+    request<{ opportunity: any }>(`/opportunities/me/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     }),
   listMy: () => request<{ opportunities: any[] }>('/opportunities/me'),
