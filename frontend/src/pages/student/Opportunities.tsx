@@ -1,11 +1,23 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, MapPin, Clock, Briefcase, Building2 } from 'lucide-react'
-import { opportunityApi } from '../../services/api'
+import { Search, MapPin, Clock, Briefcase, Building2, X, CalendarDays } from 'lucide-react'
+import { applicationApi, opportunityApi } from '../../services/api'
+
+function getOrganizationName(opportunity: any) {
+  const organization = opportunity.organizationId
+  if (!organization || typeof organization === 'string') return ''
+  return organization.tradingName || organization.legalName || ''
+}
 
 export default function StudentOpportunities() {
   const [opportunities, setOpportunities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null)
+  const [applyingId, setApplyingId] = useState('')
+  const [appliedOpportunityIds, setAppliedOpportunityIds] = useState<Set<string>>(new Set())
+  const [applicationMessage, setApplicationMessage] = useState('')
+  const [applicationError, setApplicationError] = useState(false)
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState({
     fieldOfStudy: '',
@@ -14,10 +26,13 @@ export default function StudentOpportunities() {
   })
 
   useEffect(() => {
-    fetchOpportunities()
+    void fetchOpportunities()
+    void fetchMyApplications()
   }, [])
 
   const fetchOpportunities = async () => {
+    setLoading(true)
+    setErrorMessage('')
     try {
       const params: Record<string, string> = {}
       if (search) params.search = search
@@ -29,8 +44,39 @@ export default function StudentOpportunities() {
       setOpportunities(response.opportunities)
     } catch (error) {
       console.error('Failed to fetch opportunities:', error)
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to load opportunities.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchMyApplications = async () => {
+    try {
+      const response = await applicationApi.listMy()
+      setAppliedOpportunityIds(new Set(response.applications.map((application: any) =>
+        typeof application.opportunityId === 'string'
+          ? application.opportunityId
+          : application.opportunityId?._id,
+      ).filter(Boolean)))
+    } catch (error) {
+      console.error('Failed to load your applications:', error)
+    }
+  }
+
+  const applyForOpportunity = async (opportunityId: string) => {
+    setApplyingId(opportunityId)
+    setApplicationMessage('')
+    setApplicationError(false)
+    try {
+      await applicationApi.create({ opportunityId })
+      setAppliedOpportunityIds((current) => new Set(current).add(opportunityId))
+      setApplicationMessage('Your application was submitted successfully. You can track it under My Applications.')
+    } catch (error) {
+      console.error('Failed to apply for opportunity:', error)
+      setApplicationError(true)
+      setApplicationMessage(error instanceof Error ? error.message : 'Unable to submit your application.')
+    } finally {
+      setApplyingId('')
     }
   }
 
@@ -45,6 +91,12 @@ export default function StudentOpportunities() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Browse Opportunities</h1>
           <p className="text-slate-600 mb-8">Find SIWES placements that match your profile</p>
+
+          {errorMessage && (
+            <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {errorMessage}
+            </div>
+          )}
 
           {/* Search and Filters */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
@@ -110,7 +162,7 @@ export default function StudentOpportunities() {
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-500 border-t-transparent mx-auto" />
             </div>
-          ) : opportunities.length === 0 ? (
+          ) : errorMessage ? null : opportunities.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
               <Briefcase className="mx-auto text-slate-300 mb-4" size={48} />
               <p className="text-slate-600">No opportunities found matching your criteria</p>
@@ -135,6 +187,9 @@ export default function StudentOpportunities() {
                       </span>
                     </div>
                     <h3 className="text-lg font-semibold text-slate-800 mb-2">{opp.title}</h3>
+                    {getOrganizationName(opp) && (
+                      <p className="mb-2 text-sm font-medium text-slate-500">{getOrganizationName(opp)}</p>
+                    )}
                     <p className="text-sm text-slate-600 mb-4 line-clamp-2">{opp.description}</p>
                     <div className="space-y-2 text-sm text-slate-600">
                       <div className="flex items-center gap-2">
@@ -152,12 +207,109 @@ export default function StudentOpportunities() {
                     </div>
                   </div>
                   <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
-                    <button className="w-full py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedOpportunity(opp)
+                        setApplicationMessage('')
+                        setApplicationError(false)
+                      }}
+                      className="w-full py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors"
+                    >
                       View Details
                     </button>
                   </div>
                 </motion.div>
               ))}
+            </div>
+          )}
+
+          {selectedOpportunity && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="opportunity-details-title"
+                className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 sm:p-8"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-primary-700">{selectedOpportunity.fieldOfStudy}</p>
+                    <h2 id="opportunity-details-title" className="mt-1 text-2xl font-bold text-slate-900">
+                      {selectedOpportunity.title}
+                    </h2>
+                    {getOrganizationName(selectedOpportunity) && (
+                      <p className="mt-1 text-sm text-slate-500">{getOrganizationName(selectedOpportunity)}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Close opportunity details"
+                    onClick={() => setSelectedOpportunity(null)}
+                    className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                {applicationMessage && (
+                  <div
+                    role={applicationError ? 'alert' : 'status'}
+                    className={`mt-5 rounded-xl border p-4 text-sm ${
+                      applicationError
+                        ? 'border-red-200 bg-red-50 text-red-700'
+                        : 'border-primary-200 bg-primary-50 text-primary-800'
+                    }`}
+                  >
+                    {applicationMessage}
+                  </div>
+                )}
+                <div className="mt-6 space-y-5 text-sm text-slate-700">
+                  <p className="whitespace-pre-line leading-6">{selectedOpportunity.description}</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <p><strong>Location:</strong> {selectedOpportunity.location?.city}, {selectedOpportunity.location?.state}, {selectedOpportunity.location?.country}</p>
+                    <p><strong>Work arrangement:</strong> {selectedOpportunity.workArrangement}</p>
+                    <p><strong>Duration:</strong> {selectedOpportunity.durationWeeks} weeks</p>
+                    <p><strong>Available slots:</strong> {selectedOpportunity.availableSlots}</p>
+                    <p className="flex items-center gap-2">
+                      <CalendarDays size={16} />
+                      <strong>Deadline:</strong> {new Date(selectedOpportunity.applicationDeadline).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {selectedOpportunity.requiredSkills?.length > 0 && (
+                    <p><strong>Required skills:</strong> {selectedOpportunity.requiredSkills.join(', ')}</p>
+                  )}
+                  {selectedOpportunity.academicRequirements && (
+                    <p className="whitespace-pre-line"><strong>Academic requirements:</strong> {selectedOpportunity.academicRequirements}</p>
+                  )}
+                  {selectedOpportunity.requiredDocuments?.length > 0 && (
+                    <p><strong>Required documents:</strong> {selectedOpportunity.requiredDocuments.join(', ')}</p>
+                  )}
+                  {selectedOpportunity.additionalRequirements && (
+                    <p className="whitespace-pre-line"><strong>Additional requirements:</strong> {selectedOpportunity.additionalRequirements}</p>
+                  )}
+                </div>
+                <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOpportunity(null)}
+                    className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    disabled={applyingId === selectedOpportunity._id || appliedOpportunityIds.has(selectedOpportunity._id)}
+                    onClick={() => void applyForOpportunity(selectedOpportunity._id)}
+                    className="rounded-xl bg-primary-600 px-5 py-3 font-semibold text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {applyingId === selectedOpportunity._id
+                      ? 'Submitting…'
+                      : appliedOpportunityIds.has(selectedOpportunity._id)
+                        ? 'Already applied'
+                        : 'Apply now'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </motion.div>

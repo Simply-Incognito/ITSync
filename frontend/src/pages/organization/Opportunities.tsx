@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Briefcase, Clock, CheckCircle, XCircle, Eye, Edit } from 'lucide-react'
+import { Plus, Briefcase, Clock, CheckCircle, XCircle, Edit } from 'lucide-react'
 import { opportunityApi } from '../../services/api'
 
 export default function OrganizationOpportunities() {
   const [opportunities, setOpportunities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [formError, setFormError] = useState('')
@@ -26,6 +27,25 @@ export default function OrganizationOpportunities() {
     requiredDocuments: '',
     additionalRequirements: '',
   })
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      fieldOfStudy: '',
+      requiredSkills: '',
+      academicRequirements: '',
+      city: '',
+      state: '',
+      country: 'Nigeria',
+      workArrangement: 'onsite',
+      durationWeeks: '',
+      availableSlots: '',
+      applicationDeadline: '',
+      requiredDocuments: '',
+      additionalRequirements: '',
+    })
+  }
 
   useEffect(() => {
     fetchOpportunities()
@@ -48,36 +68,92 @@ export default function OrganizationOpportunities() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
+  const openCreateForm = () => {
+    setEditingId(null)
+    resetForm()
+    setFormError('')
+    setShowCreateForm(true)
+  }
+
+  const openEditForm = (opportunity: any) => {
+    setEditingId(opportunity._id)
+    setFormError('')
+    setFormData({
+      title: opportunity.title,
+      description: opportunity.description,
+      fieldOfStudy: opportunity.fieldOfStudy,
+      requiredSkills: (opportunity.requiredSkills || []).join(', '),
+      academicRequirements: opportunity.academicRequirements || '',
+      city: opportunity.location.city,
+      state: opportunity.location.state,
+      country: opportunity.location.country,
+      workArrangement: opportunity.workArrangement,
+      durationWeeks: String(opportunity.durationWeeks),
+      availableSlots: String(opportunity.availableSlots),
+      applicationDeadline: new Date(opportunity.applicationDeadline).toISOString().slice(0, 10),
+      requiredDocuments: (opportunity.requiredDocuments || []).join(', '),
+      additionalRequirements: opportunity.additionalRequirements || '',
+    })
+    setShowCreateForm(true)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     setFormError('')
+    const data = {
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      fieldOfStudy: formData.fieldOfStudy.trim(),
+      requiredSkills: formData.requiredSkills.split(',').map((value) => value.trim()).filter(Boolean),
+      academicRequirements: formData.academicRequirements.trim(),
+      location: {
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        country: formData.country.trim(),
+      },
+      workArrangement: formData.workArrangement,
+      durationWeeks: Number(formData.durationWeeks),
+      availableSlots: Number(formData.availableSlots),
+      applicationDeadline: new Date(`${formData.applicationDeadline}T23:59:59`),
+      requiredDocuments: formData.requiredDocuments.split(',').map((value) => value.trim()).filter(Boolean),
+      additionalRequirements: formData.additionalRequirements.trim(),
+    }
+
     try {
-      await opportunityApi.create({
-        title: formData.title,
-        description: formData.description,
-        fieldOfStudy: formData.fieldOfStudy,
-        requiredSkills: formData.requiredSkills ? formData.requiredSkills.split(',').map((s) => s.trim()) : [],
-        academicRequirements: formData.academicRequirements,
-        location: {
-          city: formData.city,
-          state: formData.state,
-          country: formData.country,
-        },
-        workArrangement: formData.workArrangement,
-        durationWeeks: parseInt(formData.durationWeeks),
-        availableSlots: parseInt(formData.availableSlots),
-        applicationDeadline: new Date(`${formData.applicationDeadline}T23:59:59`),
-        requiredDocuments: formData.requiredDocuments ? formData.requiredDocuments.split(',').map((s) => s.trim()) : [],
-        additionalRequirements: formData.additionalRequirements,
-      })
+      if (editingId) await opportunityApi.update(editingId, data)
+      else await opportunityApi.create(data)
       await fetchOpportunities()
       setShowCreateForm(false)
+      setEditingId(null)
     } catch (error) {
-      console.error('Failed to create opportunity:', error)
-      setFormError(error instanceof Error ? error.message : 'Failed to create opportunity.')
+      console.error('Failed to save opportunity:', error)
+      setFormError(error instanceof Error ? error.message : 'Failed to save opportunity.')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleSubmitForReview = async (opportunityId: string) => {
+    setErrorMessage('')
+    try {
+      await opportunityApi.submit(opportunityId)
+      await fetchOpportunities()
+    } catch (error) {
+      console.error('Failed to submit opportunity for review:', error)
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to submit opportunity for review.')
+    }
+  }
+
+  const handleCloseOpportunity = async (opportunityId: string) => {
+    if (!window.confirm('Close this opportunity? Students will no longer be able to apply.')) return
+    setErrorMessage('')
+    try {
+      await opportunityApi.close(opportunityId)
+      await fetchOpportunities()
+    } catch (error) {
+      console.error('Failed to close opportunity:', error)
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to close opportunity.')
     }
   }
 
@@ -103,10 +179,7 @@ export default function OrganizationOpportunities() {
               <p className="text-slate-600 mt-2">Manage your SIWES postings</p>
             </div>
             <button
-              onClick={() => {
-                setFormError('')
-                setShowCreateForm(true)
-              }}
+              onClick={openCreateForm}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
             >
               <Plus size={20} />
@@ -120,7 +193,7 @@ export default function OrganizationOpportunities() {
             </div>
           )}
 
-          {/* Create Form Modal */}
+          {/* Create and edit form */}
           {showCreateForm && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <motion.div
@@ -128,7 +201,14 @@ export default function OrganizationOpportunities() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8"
               >
-                <h2 className="text-2xl font-bold text-slate-800 mb-6">Create New Opportunity</h2>
+                <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                  {editingId ? 'Edit Opportunity' : 'Create New Opportunity'}
+                </h2>
+                <p className="mb-6 text-sm text-slate-600">
+                  {editingId
+                    ? 'Update your draft or rejected posting before submitting it for review.'
+                    : 'Save as a draft first. You can edit it before submitting it for review.'}
+                </p>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {formError && (
                     <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -161,6 +241,28 @@ export default function OrganizationOpportunities() {
                       required
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Required skills</label>
+                    <input
+                      type="text"
+                      name="requiredSkills"
+                      value={formData.requiredSkills}
+                      onChange={handleChange}
+                      placeholder="Separate skills with commas"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Academic requirements</label>
+                    <textarea
+                      name="academicRequirements"
+                      maxLength={3000}
+                      value={formData.academicRequirements}
+                      onChange={handleChange}
+                      rows={2}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">Field of Study</label>
@@ -188,6 +290,28 @@ export default function OrganizationOpportunities() {
                         <option value="remote">Remote</option>
                       </select>
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Required documents</label>
+                    <input
+                      type="text"
+                      name="requiredDocuments"
+                      value={formData.requiredDocuments}
+                      onChange={handleChange}
+                      placeholder="Separate documents with commas"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Additional requirements</label>
+                    <textarea
+                      name="additionalRequirements"
+                      maxLength={3000}
+                      value={formData.additionalRequirements}
+                      onChange={handleChange}
+                      rows={2}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -240,6 +364,17 @@ export default function OrganizationOpportunities() {
                         required
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Country</label>
+                      <input
+                        type="text"
+                        name="country"
+                        value={formData.country}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        required
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Application Deadline</label>
@@ -256,7 +391,10 @@ export default function OrganizationOpportunities() {
                   <div className="flex gap-4 pt-4">
                     <button
                       type="button"
-                      onClick={() => setShowCreateForm(false)}
+                      onClick={() => {
+                        setShowCreateForm(false)
+                        setEditingId(null)
+                      }}
                       disabled={submitting}
                       className="flex-1 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
                     >
@@ -267,7 +405,7 @@ export default function OrganizationOpportunities() {
                       disabled={submitting}
                       className="flex-1 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
                     >
-                      {submitting ? 'Creating…' : 'Create Draft'}
+                      {submitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Draft'}
                     </button>
                   </div>
                 </form>
@@ -316,17 +454,41 @@ export default function OrganizationOpportunities() {
                       </span>
                     </div>
                     <div className="mt-4 flex gap-3">
-                      <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
-                        <Eye size={16} />
-                        View
-                      </button>
-                      {opp.status === 'draft' && (
-                        <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors">
+                      {(opp.status === 'draft' || opp.status === 'rejected') && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openEditForm(opp)}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors"
+                          >
                           <Edit size={16} />
                           Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleSubmitForReview(opp._id)}
+                            className="px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors"
+                          >
+                            Submit for review
+                          </button>
+                        </>
+                      )}
+                      {opp.status === 'published' && (
+                        <button
+                          type="button"
+                          onClick={() => void handleCloseOpportunity(opp._id)}
+                          className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
+                        >
+                          Close applications
                         </button>
                       )}
                     </div>
+                    {opp.status === 'rejected' && opp.reviewNote && (
+                      <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                        <p className="text-sm font-semibold text-red-800">Admin feedback</p>
+                        <p className="mt-1 whitespace-pre-line text-sm text-red-700">{opp.reviewNote}</p>
+                      </div>
+                    )}
                   </motion.div>
                 )
               })}
