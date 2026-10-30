@@ -1,50 +1,56 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Briefcase, Clock, CheckCircle, XCircle, Edit } from 'lucide-react'
+import { Plus, Briefcase, Clock, CheckCircle, XCircle, Edit, type LucideIcon } from 'lucide-react'
 import { opportunityApi } from '../../services/api'
+import type { Opportunity, OpportunityInput, WorkArrangement } from '../../types/domain'
+import { getErrorMessage } from '../../utils/errors'
+
+interface OpportunityFormState {
+  title: string
+  description: string
+  fieldOfStudy: string
+  requiredSkills: string
+  academicRequirements: string
+  city: string
+  state: string
+  country: string
+  workArrangement: WorkArrangement
+  durationWeeks: string
+  availableSlots: string
+  applicationDeadline: string
+  requiredDocuments: string
+  additionalRequirements: string
+}
+
+const emptyForm: OpportunityFormState = {
+  title: '',
+  description: '',
+  fieldOfStudy: '',
+  requiredSkills: '',
+  academicRequirements: '',
+  city: '',
+  state: '',
+  country: 'Nigeria',
+  workArrangement: 'onsite',
+  durationWeeks: '',
+  availableSlots: '',
+  applicationDeadline: '',
+  requiredDocuments: '',
+  additionalRequirements: '',
+}
 
 export default function OrganizationOpportunities() {
-  const [opportunities, setOpportunities] = useState<any[]>([])
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [formError, setFormError] = useState('')
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    fieldOfStudy: '',
-    requiredSkills: '',
-    academicRequirements: '',
-    city: '',
-    state: '',
-    country: 'Nigeria',
-    workArrangement: 'onsite',
-    durationWeeks: '',
-    availableSlots: '',
-    applicationDeadline: '',
-    requiredDocuments: '',
-    additionalRequirements: '',
-  })
+  const [formData, setFormData] = useState<OpportunityFormState>(emptyForm)
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      fieldOfStudy: '',
-      requiredSkills: '',
-      academicRequirements: '',
-      city: '',
-      state: '',
-      country: 'Nigeria',
-      workArrangement: 'onsite',
-      durationWeeks: '',
-      availableSlots: '',
-      applicationDeadline: '',
-      requiredDocuments: '',
-      additionalRequirements: '',
-    })
+    setFormData(emptyForm)
   }
 
   useEffect(() => {
@@ -58,14 +64,21 @@ export default function OrganizationOpportunities() {
       setErrorMessage('')
     } catch (error) {
       console.error('Failed to fetch opportunities:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to load opportunities.')
+      setErrorMessage(getErrorMessage(error, 'Unable to load opportunities.'))
     } finally {
       setLoading(false)
     }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+
+    if (name === 'workArrangement') {
+      setFormData((current) => ({ ...current, workArrangement: value as WorkArrangement }))
+      return
+    }
+
+    setFormData((current) => ({ ...current, [name]: value }))
   }
 
   const openCreateForm = () => {
@@ -75,7 +88,7 @@ export default function OrganizationOpportunities() {
     setShowCreateForm(true)
   }
 
-  const openEditForm = (opportunity: any) => {
+  const openEditForm = (opportunity: Opportunity) => {
     setEditingId(opportunity._id)
     setFormError('')
     setFormData({
@@ -101,7 +114,7 @@ export default function OrganizationOpportunities() {
     e.preventDefault()
     setSubmitting(true)
     setFormError('')
-    const data = {
+    const data: OpportunityInput = {
       title: formData.title.trim(),
       description: formData.description.trim(),
       fieldOfStudy: formData.fieldOfStudy.trim(),
@@ -115,7 +128,7 @@ export default function OrganizationOpportunities() {
       workArrangement: formData.workArrangement,
       durationWeeks: Number(formData.durationWeeks),
       availableSlots: Number(formData.availableSlots),
-      applicationDeadline: new Date(`${formData.applicationDeadline}T23:59:59`),
+      applicationDeadline: new Date(`${formData.applicationDeadline}T23:59:59`).toISOString(),
       requiredDocuments: formData.requiredDocuments.split(',').map((value) => value.trim()).filter(Boolean),
       additionalRequirements: formData.additionalRequirements.trim(),
     }
@@ -128,7 +141,7 @@ export default function OrganizationOpportunities() {
       setEditingId(null)
     } catch (error) {
       console.error('Failed to save opportunity:', error)
-      setFormError(error instanceof Error ? error.message : 'Failed to save opportunity.')
+      setFormError(getErrorMessage(error, 'Failed to save opportunity.'))
     } finally {
       setSubmitting(false)
     }
@@ -141,7 +154,7 @@ export default function OrganizationOpportunities() {
       await fetchOpportunities()
     } catch (error) {
       console.error('Failed to submit opportunity for review:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to submit opportunity for review.')
+      setErrorMessage(getErrorMessage(error, 'Failed to submit opportunity for review.'))
     }
   }
 
@@ -153,12 +166,12 @@ export default function OrganizationOpportunities() {
       await fetchOpportunities()
     } catch (error) {
       console.error('Failed to close opportunity:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to close opportunity.')
+      setErrorMessage(getErrorMessage(error, 'Failed to close opportunity.'))
     }
   }
 
   const getStatusConfig = (status: string) => {
-    const configs: Record<string, { icon: any; color: string; bg: string }> = {
+    const configs: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
       draft: { icon: Edit, color: 'text-gray-600', bg: 'bg-gray-100' },
       pending_review: { icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100' },
       published: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100' },

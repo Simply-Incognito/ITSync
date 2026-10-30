@@ -1,3 +1,21 @@
+import type {
+  Application,
+  ApplicationInput,
+  ApplicationStatus,
+  Opportunity,
+  OpportunityFilters,
+  OpportunityInput,
+  Organization,
+  OrganizationDocument,
+  OrganizationDocumentType,
+  OrganizationProfileInput,
+  Pagination,
+  RegisterData,
+  StudentProfile,
+  StudentProfileInput,
+  User,
+} from '../types/domain'
+
 /**
  * Resolves the API origin.
  *
@@ -227,13 +245,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const authApi = {
   login: (email: string, password: string) =>
-    request<{ accessToken: string; user: any }>('/auth/login', {
+    request<{ accessToken: string; user: User }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
 
-  register: (data: any) =>
-    request<{ accessToken: string; user: any }>('/auth/register', {
+  register: (data: RegisterData) =>
+    request<{ accessToken: string; user: User }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -251,10 +269,10 @@ export const authApi = {
     }),
 
   getCurrentUser: () =>
-    request<{ user: any; student: any }>('/auth/me'),
+    request<{ user: User; student: StudentProfile | null }>('/auth/me'),
 
-  updateStudentProfile: (data: any) =>
-    request<any>('/auth/student-profile', {
+  updateStudentProfile: (data: Partial<StudentProfileInput>) =>
+    request<StudentProfile>('/auth/student-profile', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
@@ -264,98 +282,104 @@ export const authApi = {
 }
 
 export const studentApi = {
-  getProfile: () => request<{ student: any }>('/students/me'),
-  createProfile: (data: any) =>
-    request<{ student: any }>('/students/me', {
+  getProfile: () => request<{ student: StudentProfile }>('/students/me'),
+  createProfile: (data: StudentProfileInput) =>
+    request<{ student: StudentProfile }>('/students/me', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  updateProfile: (data: any) =>
-    request<{ student: any }>('/students/me', {
+  updateProfile: (data: Partial<StudentProfileInput>) =>
+    request<{ student: StudentProfile }>('/students/me', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
 }
 
 export const organizationApi = {
-  getProfile: () => request<{ organization: any; documents: any[] }>('/organizations/me'),
-  createProfile: (data: any) =>
-    request<{ organization: any }>('/organizations', {
+  getProfile: () =>
+    request<{ organization: Organization | null; documents: OrganizationDocument[] }>(
+      '/organizations/me',
+    ),
+  createProfile: (data: OrganizationProfileInput) =>
+    request<{ organization: Organization }>('/organizations', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  updateProfile: (data: any) =>
-    request<{ organization: any }>('/organizations/me', {
+  updateProfile: (data: Partial<OrganizationProfileInput>) =>
+    request<{ organization: Organization }>('/organizations/me', {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
   submitForVerification: () =>
-    request<{ organization: any }>('/organizations/me/verification', {
+    request<{ organization: Organization }>('/organizations/me/verification', {
       method: 'POST',
     }),
-  uploadDocument: async (file: File, documentType: string) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('documentType', documentType);
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return fetch(`${API_BASE}/organizations/me/documents`, {
+  uploadDocument: async (file: File, documentType: OrganizationDocumentType) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('documentType', documentType)
+
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_BASE}/organizations/me/documents`, {
       method: 'POST',
-      headers,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
-    }).then((response) => {
-      if (!response.ok) {
-        return response.json().then((error) => {
-          throw new Error(error.error?.message || 'Failed to upload document');
-        });
-      }
-      return response.json();
-    });
+    })
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as ApiErrorResponse | undefined
+      throw new Error(body?.error?.message || 'Failed to upload document')
+    }
+
+    return (await response.json()) as { document: OrganizationDocument }
   },
 }
 
 export const opportunityApi = {
   list: (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params).toString()}` : ''
-    return request<{ opportunities: any[]; pagination: any }>(`/opportunities${query}`)
+    return request<{ opportunities: Opportunity[]; pagination: Pagination }>(
+      `/opportunities${query}`,
+    )
   },
-  get: (id: string) => request<{ opportunity: any }>(`/opportunities/${id}`),
-  getFilters: () => request<{ filters: any }>('/opportunities/filters'),
-  create: (data: any) =>
-    request<{ opportunity: any }>('/opportunities/me', {
+  get: (id: string) => request<{ opportunity: Opportunity }>(`/opportunities/${id}`),
+  getFilters: () => request<{ filters: OpportunityFilters }>('/opportunities/filters'),
+  create: (data: OpportunityInput) =>
+    request<{ opportunity: Opportunity }>('/opportunities/me', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  update: (id: string, data: any) =>
-    request<{ opportunity: any }>(`/opportunities/me/${encodeURIComponent(id)}`, {
+  update: (id: string, data: Partial<OpportunityInput>) =>
+    request<{ opportunity: Opportunity }>(`/opportunities/me/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  listMy: () => request<{ opportunities: any[] }>('/opportunities/me'),
+  listMy: () => request<{ opportunities: Opportunity[] }>('/opportunities/me'),
   submit: (id: string) =>
-    request<{ opportunity: any }>(`/opportunities/me/${id}/submit`, { method: 'POST' }),
+    request<{ opportunity: Opportunity }>(`/opportunities/me/${id}/submit`, { method: 'POST' }),
   close: (id: string) =>
-    request<{ opportunity: any }>(`/opportunities/me/${id}/close`, { method: 'POST' }),
+    request<{ opportunity: Opportunity }>(`/opportunities/me/${id}/close`, { method: 'POST' }),
 }
 
 export const applicationApi = {
-  create: (data: any) =>
-    request<{ application: any }>('/applications', {
+  create: (data: ApplicationInput) =>
+    request<{ application: Application }>('/applications', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  listMy: () => request<{ applications: any[]; pagination: any }>('/applications/my'),
+  listMy: () => request<{ applications: Application[]; pagination: Pagination }>('/applications/my'),
   listAll: (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params).toString()}` : ''
-    return request<{ applications: any[]; pagination: any }>(`/applications${query}`)
+    return request<{ applications: Application[]; pagination: Pagination }>(
+      `/applications${query}`,
+    )
   },
   listForOrganization: () =>
-    request<{ applications: any[]; pagination: any }>('/applications/organization/me'),
-  updateStatus: (id: string, data: any) =>
-    request<{ application: any }>(`/applications/${id}/status`, {
+    request<{ applications: Application[]; pagination: Pagination }>(
+      '/applications/organization/me',
+    ),
+  updateStatus: (id: string, data: { status: ApplicationStatus; reason?: string }) =>
+    request<{ application: Application }>(`/applications/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
