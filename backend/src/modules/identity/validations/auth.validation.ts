@@ -14,25 +14,6 @@ const studentRegistrationSchema = z.object({
   skills: z.array(z.string().trim().min(1).max(80)).max(40).optional(),
 });
 
-const organizationRegistrationSchema = z.object({
-  legalName: z.string().trim().min(2, 'Legal name must be at least 2 characters').max(200),
-  tradingName: z.string().trim().min(2).max(200).optional(),
-  registrationCountry: z.string().trim().length(2).default('NG'),
-  registrationNumber: z.string().trim().min(3, 'Registration number must be at least 3 characters').max(80),
-  industry: z.string().trim().min(2, 'Industry must be at least 2 characters').max(120),
-  description: z.string().trim().min(10, 'Description must be at least 10 characters').max(3000),
-  website: z.string().trim().max(300, 'Website must be a valid URL').optional().or(z.literal('')),
-  representativeName: z.string().trim().min(2, 'Representative name must be at least 2 characters').max(160),
-  representativeTitle: z.string().trim().min(2, 'Representative title must be at least 2 characters').max(120),
-  address: z.object({
-    street: z.string().trim().min(3, 'Street must be at least 3 characters').max(200),
-    city: z.string().trim().min(2, 'City must be at least 2 characters').max(120),
-    state: z.string().trim().min(2, 'State must be at least 2 characters').max(120),
-    country: z.string().trim().min(2, 'Country must be at least 2 characters').max(120),
-    postalCode: z.string().trim().max(30).optional(),
-  }),
-});
-
 export const registerSchema = z
   .object({
     email: z.email().max(254),

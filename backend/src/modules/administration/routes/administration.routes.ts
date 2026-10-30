@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { Types } from 'mongoose';
 import { AppError } from '../../../errors/app-error.js';
 import { requireAuthentication, requireRoles } from '../../identity/middleware/authenticate.js';
-import { User, type UserRole } from '../../identity/models/user.model.js';
-import type { OrganizationStatus } from '../../organizations/models/organization.model.js';
+import { User, userRoles, type UserRole } from '../../identity/models/user.model.js';
+import {
+  organizationStatuses,
+  type OrganizationStatus,
+} from '../../organizations/models/organization.model.js';
 import { OrganizationReviewEvent } from '../../organizations/models/organization-review-event.model.js';
 import { ApplicationReviewEvent } from '../../applications/models/application-review-event.model.js';
 import { OpportunityReviewEvent } from '../../opportunities/models/opportunity-review-event.model.js';
@@ -20,13 +23,24 @@ export const administrationRouter = Router();
 
 const adminAccess = [requireAuthentication, requireRoles('administrator')];
 
+const maxPageSize = 100;
+
+/** Clamps pagination so a single request cannot scan or return an unbounded set. */
+function pagination(query: { page?: unknown; limit?: unknown }) {
+  const page = Math.max(1, Math.trunc(Number(query.page)) || 1);
+  const limit = Math.min(maxPageSize, Math.max(1, Math.trunc(Number(query.limit)) || 20));
+
+  return { page, limit };
+}
+
 administrationRouter.get('/users', ...adminAccess, async (request, response) => {
-  const page = Number(request.query.page) || 1;
-  const limit = Number(request.query.limit) || 20;
-  const search = request.query.search as string | undefined;
+  const { page, limit } = pagination(request.query);
+  const search = typeof request.query.search === 'string' ? request.query.search : undefined;
 
   const filters: UserManagementFilter = {};
-  if (typeof request.query.role === 'string') filters.role = request.query.role as UserRole;
+  if (typeof request.query.role === 'string' && userRoles.includes(request.query.role as UserRole)) {
+    filters.role = request.query.role as UserRole;
+  }
   if (request.query.status === 'active' || request.query.status === 'suspended') {
     filters.status = request.query.status;
   }
@@ -37,12 +51,15 @@ administrationRouter.get('/users', ...adminAccess, async (request, response) => 
 });
 
 administrationRouter.get('/organizations', ...adminAccess, async (request, response) => {
-  const page = Number(request.query.page) || 1;
-  const limit = Number(request.query.limit) || 20;
-  const status = request.query.status as OrganizationStatus | undefined;
+  const { page, limit } = pagination(request.query);
 
   const filters: OrganizationManagementFilter = {};
-  if (status) filters.status = status;
+  if (
+    typeof request.query.status === 'string' &&
+    organizationStatuses.includes(request.query.status as OrganizationStatus)
+  ) {
+    filters.status = request.query.status as OrganizationStatus;
+  }
 
   const result = await getOrganizationManagement(filters, page, limit);
   response.json({ organizations: result.organizations, pagination: result });
