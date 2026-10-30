@@ -1,85 +1,104 @@
+import { Types } from 'mongoose';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AppError } from '../src/errors/app-error.js';
+import type * as AuthService from '../src/modules/identity/services/auth.service.js';
 
-const { updateApplicationStatus } = vi.hoisted(() => ({
-  updateApplicationStatus: vi.fn(),
-}));
-
-const { Application, applicationStatuses } = vi.hoisted(() => ({
-  Application: {
-    findOne: vi.fn(),
-    find: vi.fn(),
-    countDocuments: vi.fn(),
-    create: vi.fn(),
-    findByIdAndUpdate: vi.fn(),
-    findById: vi.fn(),
+const { authenticate, applicationService } = vi.hoisted(() => ({
+  authenticate: vi.fn(),
+  applicationService: {
+    canApplyForOpportunity: vi.fn(),
+    createApplication: vi.fn(),
+    listApplications: vi.fn(),
+    updateApplicationStatus: vi.fn(),
   },
-  applicationStatuses,
 }));
 
-vi.mock('../src/modules/applications/models/application.model.js', () => ({
-  Application,
-  applicationStatuses,
-}));
+vi.mock('../src/modules/identity/services/auth.service.js', async () => {
+  const actual = await vi.importActual<typeof AuthService>(
+    '../src/modules/identity/services/auth.service.js',
+  );
 
-vi.mock('../src/modules/applications/services/application.service.js', () => ({
-  canApplyForOpportunity: vi.fn(),
-  createApplication: vi.fn(),
-  listApplications: vi.fn(),
-  updateApplicationStatus: vi.fn(),
-}));
+  return { ...actual, authenticate };
+});
+
+vi.mock('../src/modules/applications/services/application.service.js', () => applicationService);
 
 import { createApp } from '../src/app.js';
 import { updateApplicationStatusSchema } from '../src/modules/applications/validations/application.validation.js';
 
 const app = createApp();
 
-const validTransitionInput = {
-  status: 'under_review',
-  reason: 'The candidate meets the initial criteria.',
-};
+const studentId = '68d2c50a8c4e1c843a39a201';
+const adminId = '68d2c50a8c4e1c843a39a204';
+const opportunityId = '68d2c50a8c4e1c843a39a205';
+const applicationId = '68d2c50a8c4e1c843a39a206';
+
+const studentIdentity = { id: studentId, email: 'student@example.test', role: 'student' };
+const adminIdentity = { id: adminId, email: 'admin@example.test', role: 'administrator' };
 
 describe('application routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Application.findOne.mockResolvedValue(null);
-    Application.find.mockResolvedValue({ docs: [], total: 0 });
-    Application.countDocuments.mockResolvedValue(0);
-    Application.create.mockResolvedValue({ _id: 'app-1', ...validTransitionInput });
-    Application.findById.mockResolvedValue({ _id: 'app-1', status: 'submitted' });
-    Application.findByIdAndUpdate.mockResolvedValue({ _id: 'app-1', status: 'under_review' });
+    authenticate.mockResolvedValue(studentIdentity);
+    applicationService.createApplication.mockResolvedValue({
+      _id: applicationId,
+      status: 'submitted',
+    });
+    applicationService.listApplications.mockResolvedValue({
+      applications: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
+    applicationService.updateApplicationStatus.mockResolvedValue({
+      _id: applicationId,
+      status: 'under_review',
+    });
   });
 
   it('allows a student to submit an application', async () => {
-    const canApplyResult = { canApply: true };
-    (vi.mocked(canApplyForOpportunity) as any).mockResolvedValue(canApplyResult);
-    createApplication.mockResolvedValue({ _id: 'app-1', status: 'submitted' });
-
     const response = await request(app)
       .post('/api/v1/applications')
       .set('Authorization', 'Bearer student-token')
-      .send({ opportunityId: 'opp-1' });
+      .send({ opportunityId });
 
     expect(response.status).toBe(201);
-    expect(canApplyForOpportunity).toHaveBeenCalled();
+    expect(applicationService.createApplication).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studentId: expect.any(Types.ObjectId),
+        opportunityId: expect.any(Types.ObjectId),
+      }),
+      studentId,
+    );
+  });
+
+  it('rejects an invalid opportunity id', async () => {
+    const response = await request(app)
+      .post('/api/v1/applications')
+      .set('Authorization', 'Bearer student-token')
+      .send({ opportunityId: 'not-an-object-id' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('INVALID_OPPORTUNITY_ID');
   });
 
   it('prevents duplicate applications', async () => {
-    Application.findOne.mockResolvedValue({ _id: 'app-1' });
+    applicationService.createApplication.mockRejectedValue(
+      new AppError('You have already applied to this opportunity.', 409, 'DUPLICATE_APPLICATION'),
+    );
 
     const response = await request(app)
       .post('/api/v1/applications')
       .set('Authorization', 'Bearer student-token')
-      .send({ opportunityId: 'opp-1' });
+      .send({ opportunityId });
 
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('DUPLICATE_APPLICATION');
   });
 
   it('allows a student to view their applications', async () => {
-    Application.find.mockResolvedValue({
-      docs: [{ _id: 'app-1', status: 'submitted' }],
-      total: 1,
+    applicationService.listApplications.mockResolvedValue({
+      applications: [{ _id: applicationId, status: 'submitted' }],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
     });
 
     const response = await request(app)
@@ -91,44 +110,67 @@ describe('application routes', () => {
   });
 
   it('allows an administrator to view all applications', async () => {
-    Application.find.mockResolvedValue({
-      docs: [{ _id: 'app-1', status: 'submitted' }],
-      total: 1,
-    });
+    authenticate.mockResolvedValue(adminIdentity);
 
     const response = await request(app)
       .get('/api/v1/applications')
-      .query({ status: 'submitted' })
+      .query({ status: 'submitted', page: '2', limit: '5' })
       .set('Authorization', 'Bearer admin-token');
 
     expect(response.status).toBe(200);
-    expect(Application.find).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'submitted' }),
+    expect(applicationService.listApplications).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'submitted', page: 2, limit: 5 }),
+      adminId,
     );
   });
 
+  it('rejects invalid application filters and pagination', async () => {
+    authenticate.mockResolvedValue(adminIdentity);
+
+    const invalidStatus = await request(app)
+      .get('/api/v1/applications')
+      .query({ status: 'invalid' })
+      .set('Authorization', 'Bearer test-token');
+    const invalidLimit = await request(app)
+      .get('/api/v1/applications')
+      .query({ limit: '101' })
+      .set('Authorization', 'Bearer test-token');
+
+    expect(invalidStatus.status).toBe(400);
+    expect(invalidStatus.body.error.code).toBe('INVALID_APPLICATION_STATUS');
+    expect(invalidLimit.status).toBe(400);
+    expect(invalidLimit.body.error.code).toBe('INVALID_PAGINATION');
+  });
+
   it('allows an administrator to update application status', async () => {
-    Application.findById.mockResolvedValue({ _id: 'app-1', status: 'submitted' });
-    Application.findByIdAndUpdate.mockResolvedValue({ _id: 'app-1', status: 'under_review' });
+    authenticate.mockResolvedValue(adminIdentity);
 
     const response = await request(app)
-      .patch('/api/v1/applications/app-1/status')
+      .patch(`/api/v1/applications/${applicationId}/status`)
       .set('Authorization', 'Bearer admin-token')
       .send({ status: 'under_review', reason: 'Reviewing candidate' });
 
     expect(response.status).toBe(200);
-    expect(Application.findByIdAndUpdate).toHaveBeenCalledWith(
-      'app-1',
-      { status: 'under_review' },
-      expect.anything(),
+    expect(applicationService.updateApplicationStatus).toHaveBeenCalledWith(
+      expect.any(Types.ObjectId),
+      'under_review',
+      adminId,
+      'Reviewing candidate',
     );
   });
 
   it('denies invalid status transitions', async () => {
-    Application.findById.mockResolvedValue({ _id: 'app-1', status: 'accepted' });
+    authenticate.mockResolvedValue(adminIdentity);
+    applicationService.updateApplicationStatus.mockRejectedValue(
+      new AppError(
+        'Cannot transition from "accepted" to "under_review".',
+        409,
+        'INVALID_APPLICATION_STATUS_TRANSITION',
+      ),
+    );
 
     const response = await request(app)
-      .patch('/api/v1/applications/app-1/status')
+      .patch(`/api/v1/applications/${applicationId}/status`)
       .set('Authorization', 'Bearer admin-token')
       .send({ status: 'under_review' });
 
@@ -137,10 +179,10 @@ describe('application routes', () => {
   });
 
   it('requires authentication', async () => {
-    const response = await request(app).post('/api/v1/applications');
+    const response = await request(app).post('/api/v1/applications').send({ opportunityId });
 
     expect(response.status).toBe(401);
-    expect(Application.create).not.toHaveBeenCalled();
+    expect(applicationService.createApplication).not.toHaveBeenCalled();
   });
 });
 

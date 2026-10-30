@@ -166,9 +166,8 @@ export const openApiDocument = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['actorUserId', 'action', 'targetType', 'targetId'],
+                required: ['action', 'targetType', 'targetId'],
                 properties: {
-                  actorUserId: { type: 'string', description: 'User ID who performed the action' },
                   action: { type: 'string', description: 'Action performed' },
                   targetType: {
                     type: 'string',
@@ -176,6 +175,17 @@ export const openApiDocument = {
                   },
                   targetId: { type: 'string', description: 'Target ID affected' },
                   details: { type: 'object', description: 'Additional details', default: {} },
+                },
+              },
+              '/administration/activity': {
+                get: {
+                  summary: 'Get recent platform administration activity',
+                  tags: ['Administration'],
+                  security: [{ bearerAuth: [] }],
+                  responses: {
+                    '200': { description: 'Recent account and domain review events.' },
+                    '401': { description: 'Administrator role required.' },
+                  },
                 },
               },
             },
@@ -227,40 +237,6 @@ export const openApiDocument = {
           '400': { description: 'Invalid status value.' },
           '401': { description: 'Administrator role required.' },
           '404': { description: 'User not found.' },
-        },
-      },
-    },
-    '/administration/organizations/:organizationId/verification': {
-      patch: {
-        summary: 'Update organization verification status',
-        tags: ['Administration'],
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'organizationId', in: 'path', required: true, schema: { type: 'string' } },
-        ],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['verificationStatus'],
-                properties: {
-                  verificationStatus: {
-                    type: 'string',
-                    enum: ['verified', 'rejected', 'suspended'],
-                  },
-                  notes: { type: 'string', description: 'Reason for rejection or approval' },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          '200': { description: 'Organization verification status updated.' },
-          '400': { description: 'Invalid verification status.' },
-          '401': { description: 'Administrator role required.' },
-          '404': { description: 'Organization not found.' },
         },
       },
     },
@@ -321,6 +297,37 @@ export const openApiDocument = {
       },
     },
     '/applications': {
+      get: {
+        summary: 'List applications for administrator review',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'status',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: [
+                'submitted',
+                'under_review',
+                'shortlisted',
+                'interview',
+                'offer',
+                'accepted',
+                'rejected',
+                'withdrawn',
+              ],
+            },
+          },
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100 } },
+        ],
+        responses: {
+          '200': { description: 'Paginated applications matching the status filter.' },
+          '400': { description: 'Invalid filter or pagination value.' },
+          '401': { description: 'Administrator role required.' },
+        },
+      },
       post: {
         summary: 'Submit an application for a published opportunity',
         tags: ['Applications'],
@@ -339,37 +346,6 @@ export const openApiDocument = {
         tags: ['Applications'],
         security: [{ bearerAuth: [] }],
         responses: { '200': { description: 'Student applications.' } },
-      },
-    },
-    '/applications/admin': {
-      get: {
-        summary: 'List applications for administrator review',
-        tags: ['Administration'],
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          {
-            name: 'status',
-            in: 'query',
-            required: false,
-            schema: {
-              type: 'string',
-              enum: [
-                'submitted',
-                'under_review',
-                'shortlisted',
-                'interview',
-                'offer',
-                'accepted',
-                'rejected',
-                'withdrawn',
-              ],
-            },
-          },
-        ],
-        responses: {
-          '200': { description: 'Applications matching the status filter.' },
-          '401': { description: 'Administrator role required.' },
-        },
       },
     },
     '/applications/:applicationId/status': {

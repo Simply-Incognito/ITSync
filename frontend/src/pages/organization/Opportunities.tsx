@@ -7,6 +7,9 @@ export default function OrganizationOpportunities() {
   const [opportunities, setOpportunities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [formError, setFormError] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -32,8 +35,10 @@ export default function OrganizationOpportunities() {
     try {
       const response = await opportunityApi.listMy()
       setOpportunities(response.opportunities)
+      setErrorMessage('')
     } catch (error) {
       console.error('Failed to fetch opportunities:', error)
+      setErrorMessage(error instanceof Error ? error.message : 'Unable to load opportunities.')
     } finally {
       setLoading(false)
     }
@@ -45,6 +50,8 @@ export default function OrganizationOpportunities() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitting(true)
+    setFormError('')
     try {
       await opportunityApi.create({
         title: formData.title,
@@ -60,14 +67,17 @@ export default function OrganizationOpportunities() {
         workArrangement: formData.workArrangement,
         durationWeeks: parseInt(formData.durationWeeks),
         availableSlots: parseInt(formData.availableSlots),
-        applicationDeadline: new Date(formData.applicationDeadline),
+        applicationDeadline: new Date(`${formData.applicationDeadline}T23:59:59`),
         requiredDocuments: formData.requiredDocuments ? formData.requiredDocuments.split(',').map((s) => s.trim()) : [],
         additionalRequirements: formData.additionalRequirements,
       })
+      await fetchOpportunities()
       setShowCreateForm(false)
-      fetchOpportunities()
     } catch (error) {
       console.error('Failed to create opportunity:', error)
+      setFormError(error instanceof Error ? error.message : 'Failed to create opportunity.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -93,13 +103,22 @@ export default function OrganizationOpportunities() {
               <p className="text-slate-600 mt-2">Manage your SIWES postings</p>
             </div>
             <button
-              onClick={() => setShowCreateForm(true)}
+              onClick={() => {
+                setFormError('')
+                setShowCreateForm(true)
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
             >
               <Plus size={20} />
               New Opportunity
             </button>
           </div>
+
+          {errorMessage && (
+            <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {errorMessage}
+            </div>
+          )}
 
           {/* Create Form Modal */}
           {showCreateForm && (
@@ -111,11 +130,18 @@ export default function OrganizationOpportunities() {
               >
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Create New Opportunity</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {formError && (
+                    <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                      {formError}
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Title</label>
                     <input
                       type="text"
                       name="title"
+                      minLength={3}
+                      maxLength={160}
                       value={formData.title}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -126,6 +152,8 @@ export default function OrganizationOpportunities() {
                     <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
                     <textarea
                       name="description"
+                      minLength={20}
+                      maxLength={10000}
                       value={formData.description}
                       onChange={handleChange}
                       rows={3}
@@ -139,6 +167,8 @@ export default function OrganizationOpportunities() {
                       <input
                         type="text"
                         name="fieldOfStudy"
+                        minLength={2}
+                        maxLength={160}
                         value={formData.fieldOfStudy}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -165,6 +195,8 @@ export default function OrganizationOpportunities() {
                       <input
                         type="number"
                         name="durationWeeks"
+                        min={1}
+                        max={104}
                         value={formData.durationWeeks}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -176,6 +208,8 @@ export default function OrganizationOpportunities() {
                       <input
                         type="number"
                         name="availableSlots"
+                        min={1}
+                        max={10000}
                         value={formData.availableSlots}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -212,6 +246,7 @@ export default function OrganizationOpportunities() {
                     <input
                       type="date"
                       name="applicationDeadline"
+                      min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
                       value={formData.applicationDeadline}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -222,15 +257,17 @@ export default function OrganizationOpportunities() {
                     <button
                       type="button"
                       onClick={() => setShowCreateForm(false)}
+                      disabled={submitting}
                       className="flex-1 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
+                      disabled={submitting}
                       className="flex-1 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
                     >
-                      Create Draft
+                      {submitting ? 'Creating…' : 'Create Draft'}
                     </button>
                   </div>
                 </form>

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { organizationProfileSchema } from '../../organizations/validations/organization.validation.js';
 import { userRoles } from '../models/user.model.js';
 
 const studentRegistrationSchema = z.object({
@@ -44,7 +45,7 @@ export const registerSchema = z
       ],
     ),
     student: studentRegistrationSchema.optional(),
-    organization: organizationRegistrationSchema.optional(),
+    organization: organizationProfileSchema.optional(),
   })
   .refine((input) => input.role !== 'student' || input.student !== undefined, {
     message: 'Student profile details are required for student accounts.',

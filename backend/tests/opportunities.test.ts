@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { authenticate, opportunityService } = vi.hoisted(() => ({
+const { authenticate, opportunityService, discoveryService } = vi.hoisted(() => ({
   authenticate: vi.fn(),
   opportunityService: {
     approveOpportunity: vi.fn(),
@@ -18,6 +18,10 @@ const { authenticate, opportunityService } = vi.hoisted(() => ({
     suspendOpportunity: vi.fn(),
     updateMyOpportunity: vi.fn(),
   },
+  discoveryService: {
+    searchOpportunities: vi.fn(),
+    getOpportunityFilters: vi.fn(),
+  },
 }));
 
 vi.mock('../src/modules/identity/services/auth.service.js', () => ({ authenticate }));
@@ -32,6 +36,10 @@ vi.mock('../src/modules/organizations/middleware/require-verified-organization.j
   },
 }));
 vi.mock('../src/modules/opportunities/services/opportunity.service.js', () => opportunityService);
+vi.mock(
+  '../src/modules/opportunities/services/opportunity-discovery.service.js',
+  () => discoveryService,
+);
 
 import { createApp } from '../src/app.js';
 import { opportunityCreateSchema } from '../src/modules/opportunities/validations/opportunity.validation.js';
@@ -57,18 +65,25 @@ describe('opportunity routes', () => {
       status: 'draft',
     });
     opportunityService.listPublishedOpportunities.mockResolvedValue([]);
+    discoveryService.searchOpportunities.mockResolvedValue({
+      opportunities: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
     opportunityService.approveOpportunity.mockResolvedValue({
       _id: 'opportunity-1',
       status: 'published',
     });
   });
 
-  it('allows public listing and uses the published-opportunity query', async () => {
+  it('allows public listing through opportunity discovery', async () => {
     const response = await request(app).get('/api/v1/opportunities');
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ opportunities: [] });
-    expect(opportunityService.listPublishedOpportunities).toHaveBeenCalledOnce();
+    expect(response.body).toEqual({
+      opportunities: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
+    expect(discoveryService.searchOpportunities).toHaveBeenCalledOnce();
   });
 
   it('allows a verified organization representative to create a draft', async () => {

@@ -55,46 +55,58 @@ export default function Register() {
     setIsLoading(true)
 
     try {
-      const data: any = {
+      const credentials = {
         email: formData.email,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
-        role,
       }
 
       if (role === 'student') {
-        data.student = {
-          fullName: formData.fullName,
-          phoneNumber: formData.phoneNumber || undefined,
-          institution: formData.institution || undefined,
-          department: formData.department || undefined,
-          fieldOfStudy: formData.fieldOfStudy || undefined,
-          currentLevel: formData.currentLevel || undefined,
-          expectedDurationWeeks: formData.expectedDurationWeeks ? parseInt(formData.expectedDurationWeeks) : undefined,
-          preferredLocations: formData.preferredLocations ? formData.preferredLocations.split(',').map((s) => s.trim()) : undefined,
-          skills: formData.skills ? formData.skills.split(',').map((s) => s.trim()) : undefined,
-        }
-      } else {
-        data.organization = {
-          legalName: formData.legalName,
-          tradingName: formData.tradingName || undefined,
-          registrationNumber: formData.registrationNumber,
-          industry: formData.industry,
-          description: formData.description,
-          website: formData.website || undefined,
-          representativeName: formData.representativeName,
-          representativeTitle: formData.representativeTitle,
-          address: {
-            street: formData.street,
-            city: formData.city,
-            state: formData.state,
-            country: formData.country,
-            postalCode: formData.postalCode || undefined,
+        await register({
+          ...credentials,
+          role,
+          student: {
+            fullName: formData.fullName,
+            phoneNumber: formData.phoneNumber || undefined,
+            institution: formData.institution || undefined,
+            department: formData.department || undefined,
+            fieldOfStudy: formData.fieldOfStudy || undefined,
+            currentLevel: formData.currentLevel || undefined,
+            expectedDurationWeeks: formData.expectedDurationWeeks
+              ? parseInt(formData.expectedDurationWeeks)
+              : undefined,
+            preferredLocations: formData.preferredLocations
+              ? formData.preferredLocations.split(',').map((value) => value.trim())
+              : undefined,
+            skills: formData.skills
+              ? formData.skills.split(',').map((value) => value.trim())
+              : undefined,
           },
-        }
+        })
+      } else {
+        await register({
+          ...credentials,
+          role,
+          organization: {
+            legalName: formData.legalName,
+            tradingName: formData.tradingName || undefined,
+            registrationNumber: formData.registrationNumber,
+            industry: formData.industry,
+            description: formData.description,
+            website: formData.website || undefined,
+            representativeName: formData.representativeName,
+            representativeTitle: formData.representativeTitle,
+            address: {
+              street: formData.street,
+              city: formData.city,
+              state: formData.state,
+              country: formData.country,
+              postalCode: formData.postalCode || undefined,
+            },
+          },
+        })
       }
 
-      await register(data)
       navigate(role === 'student' ? '/student/dashboard' : '/organization/verification')
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.')
@@ -125,14 +137,14 @@ export default function Register() {
 
           {/* Role Selection */}
           <div className="mb-8">
-            <label className="block text-sm font-medium text-slate-700 mb-3">I am a...</label>
+            <label className="block text-sm font-medium text-slate-700 mb-3">Register as...</label>
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
                 onClick={() => setRole('student')}
                 className={`p-4 rounded-xl border-2 transition-all ${role === 'student'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-slate-200 hover:border-slate-300'
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-slate-200 hover:border-slate-300'
                   }`}
               >
                 <GraduationCap className={`mx-auto mb-2 ${role === 'student' ? 'text-primary-600' : 'text-slate-400'}`} size={32} />
@@ -144,8 +156,8 @@ export default function Register() {
                 type="button"
                 onClick={() => setRole('organization_representative')}
                 className={`p-4 rounded-xl border-2 transition-all ${role === 'organization_representative'
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-slate-200 hover:border-slate-300'
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-slate-200 hover:border-slate-300'
                   }`}
               >
                 <Building2 className={`mx-auto mb-2 ${role === 'organization_representative' ? 'text-primary-600' : 'text-slate-400'}`} size={32} />
@@ -189,6 +201,7 @@ export default function Register() {
                       placeholder="Min 12 characters"
                       required
                       minLength={12}
+                      maxLength={128}
                     />
                     <button
                       type="button"
@@ -211,6 +224,8 @@ export default function Register() {
                       className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Confirm password"
                       required
+                      minLength={12}
+                      maxLength={128}
                     />
                   </div>
                 </div>
@@ -323,6 +338,8 @@ export default function Register() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Acme Corporation"
                       required
+                      minLength={2}
+                      maxLength={200}
                     />
                   </div>
                   <div>
@@ -334,6 +351,8 @@ export default function Register() {
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Acme Corp"
+                      minLength={2}
+                      maxLength={200}
                     />
                   </div>
                 </div>
@@ -348,6 +367,8 @@ export default function Register() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="RC123456"
                       required
+                      minLength={3}
+                      maxLength={80}
                     />
                   </div>
                   <div>
@@ -360,6 +381,8 @@ export default function Register() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Technology"
                       required
+                      minLength={2}
+                      maxLength={120}
                     />
                   </div>
                 </div>
@@ -373,6 +396,8 @@ export default function Register() {
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     placeholder="Brief description of your organization"
                     required
+                    minLength={20}
+                    maxLength={3000}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -386,6 +411,8 @@ export default function Register() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Jane Smith"
                       required
+                      minLength={2}
+                      maxLength={160}
                     />
                   </div>
                   <div>
@@ -398,10 +425,26 @@ export default function Register() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="HR Manager"
                       required
+                      minLength={2}
+                      maxLength={120}
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Street Address</label>
+                    <input
+                      type="text"
+                      name="street"
+                      value={formData.street}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="12 Example Street"
+                      required
+                      minLength={3}
+                      maxLength={200}
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">City</label>
                     <input
@@ -412,6 +455,8 @@ export default function Register() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Lagos"
                       required
+                      minLength={2}
+                      maxLength={120}
                     />
                   </div>
                   <div>
@@ -424,6 +469,21 @@ export default function Register() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Lagos"
                       required
+                      minLength={2}
+                      maxLength={120}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Country</label>
+                    <input
+                      type="text"
+                      name="country"
+                      value={formData.country}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      required
+                      minLength={2}
+                      maxLength={120}
                     />
                   </div>
                 </div>

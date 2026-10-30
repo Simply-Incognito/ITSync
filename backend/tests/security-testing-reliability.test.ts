@@ -1,5 +1,21 @@
 import request from 'supertest'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type * as AuthService from '../src/modules/identity/services/auth.service.js'
+
+vi.mock('../src/modules/identity/services/auth.service.js', async () => {
+  const actual = await vi.importActual<typeof AuthService>(
+    '../src/modules/identity/services/auth.service.js',
+  )
+  const { AppError } = await import('../src/errors/app-error.js')
+
+  return {
+    ...actual,
+    authenticate: vi.fn(async () => {
+      throw new AppError('Authentication is required.', 401, 'UNAUTHENTICATED')
+    }),
+  }
+})
+
 import { createApp } from '../src/app.js'
 
 const app = createApp()

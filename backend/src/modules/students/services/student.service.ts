@@ -22,9 +22,13 @@ export async function createStudentProfile(userId: string, input: StudentProfile
   }
 }
 
+export type StudentProfilePatch = {
+  [K in keyof StudentProfileInput]?: StudentProfileInput[K] | undefined;
+};
+
 export async function updateStudentProfile(
   userId: string,
-  input: Partial<StudentProfileInput>,
+  input: StudentProfilePatch,
 ) {
   const student = await Student.findOneAndUpdate(
     { userId },
