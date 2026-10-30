@@ -1,26 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { authApi } from '../services/api'
-
-export interface User {
-  id: string
-  email: string
-  role: 'student' | 'organization_representative' | 'administrator'
-  status: 'active' | 'suspended'
-  emailVerifiedAt?: string | null
-}
-
-export interface StudentProfile {
-  _id: string
-  fullName: string
-  phoneNumber?: string
-  institution?: string
-  department?: string
-  fieldOfStudy?: string
-  currentLevel?: string
-  expectedDurationWeeks?: number
-  preferredLocations?: string[]
-  skills?: string[]
-}
+import type { RegisterData, StudentProfile, StudentProfileInput, User } from '../types/domain'
 
 interface AuthContextType {
   user: User | null
@@ -31,51 +11,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<User>
   register: (data: RegisterData) => Promise<void>
   logout: () => void
-  updateProfile: (data: Partial<StudentProfile>) => Promise<void>
+  updateProfile: (data: Partial<StudentProfileInput>) => Promise<void>
 }
-
-interface RegistrationCredentials {
-  email: string
-  password: string
-  confirmPassword: string
-}
-
-interface StudentRegistration {
-  fullName: string
-  phoneNumber?: string
-  institution?: string
-  department?: string
-  fieldOfStudy?: string
-  currentLevel?: string
-  expectedDurationWeeks?: number
-  preferredLocations?: string[]
-  skills?: string[]
-}
-
-interface OrganizationRegistration {
-  legalName: string
-  tradingName?: string
-  registrationCountry?: string
-  registrationNumber: string
-  industry: string
-  description: string
-  website?: string
-  representativeName: string
-  representativeTitle: string
-  address: {
-    street: string
-    city: string
-    state: string
-    country: string
-    postalCode?: string
-  }
-}
-
-type RegisterData = RegistrationCredentials &
-  (
-    | { role: 'student'; student: StudentRegistration }
-    | { role: 'organization_representative'; organization: OrganizationRegistration }
-  )
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -130,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStudentProfile(null)
   }
 
-  const updateProfile = async (data: Partial<StudentProfile>) => {
+  const updateProfile = async (data: Partial<StudentProfileInput>) => {
     if (!token) return
     const response = await authApi.updateStudentProfile(data)
     setStudentProfile(response)

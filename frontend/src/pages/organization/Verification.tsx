@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Shield,
@@ -11,6 +12,19 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { organizationApi } from '../../services/api'
+import type { Organization, OrganizationDocument, OrganizationDocumentType } from '../../types/domain'
+import { getErrorMessage } from '../../utils/errors'
+
+interface RequiredDocument {
+  type: OrganizationDocumentType
+  label: string
+}
+
+const requiredDocuments: RequiredDocument[] = [
+  { type: 'cac_certificate', label: 'CAC Certificate' },
+  { type: 'representative_authorization', label: 'Representative Authorization' },
+  { type: 'proof_of_address', label: 'Proof of Address' },
+]
 
 type VerificationStatus = 'draft' | 'pending' | 'verified' | 'rejected' | 'suspended'
 type OrganizationDocumentType =
@@ -90,7 +104,7 @@ export default function OrganizationVerification() {
       setMessageType('error')
     } finally {
       setUploadingType(null)
-      const ref = fileInputRefs[docType]
+      const ref = fileInputRefs[docType as RequiredDocument['type']]
       if (ref?.current) {
         ref.current.value = ''
       }

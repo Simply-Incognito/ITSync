@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Building2, FileText, Users, Briefcase, Clock, CheckCircle, Plus, Eye } from 'lucide-react'
 import { organizationApi, opportunityApi, applicationApi } from '../../services/api'
+import type { Application, Opportunity, Organization } from '../../types/domain'
+import { getOpportunityTitle, getStudentName } from '../../utils/display'
 
 export default function OrganizationDashboard() {
-  const [organization, setOrganization] = useState<any>(null)
-  const [opportunities, setOpportunities] = useState<any[]>([])
-  const [applications, setApplications] = useState<any[]>([])
+  const [organization, setOrganization] = useState<Organization | null>(null)
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([])
+  const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [dataError, setDataError] = useState('')
 
@@ -18,9 +20,11 @@ export default function OrganizationDashboard() {
   const fetchData = async () => {
     try {
       const orgResponse = await organizationApi.getProfile()
-      setOrganization(orgResponse.organization)
+      const currentOrganization = orgResponse.organization
+      setOrganization(currentOrganization)
+
       const [opportunitiesResult, applicationsResult] = await Promise.allSettled([
-        orgResponse.organization.verificationStatus === 'verified'
+        currentOrganization?.verificationStatus === 'verified'
           ? opportunityApi.listMy()
           : Promise.resolve({ opportunities: [] }),
         applicationApi.listForOrganization(),
@@ -196,10 +200,10 @@ export default function OrganizationDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-slate-800">
-                        {app.studentId?.fullName || 'Student'}
+                        {getStudentName(app.studentId)}
                       </h3>
                       <p className="text-sm text-slate-600 mt-1">
-                        {app.opportunityId?.title || 'Opportunity'}
+                        {getOpportunityTitle(app.opportunityId)}
                       </p>
                     </div>
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
