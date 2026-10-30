@@ -12,7 +12,8 @@ import {
   getPublishedOpportunity,
   listMyOpportunities,
   listOpportunitiesForReview,
-  rejectOpportunity,  submitMyOpportunity,
+  rejectOpportunity,
+  submitMyOpportunity,
   suspendOpportunity,
   updateMyOpportunity,
 } from '../services/opportunity.service.js';

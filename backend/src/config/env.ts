@@ -30,6 +30,7 @@ const envSchema = z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
     WEB_APP_URL: z.url().default('http://localhost:5173'),
+    ENABLE_API_DOCS: z.stringbool().default(false),
     SMTP_HOST: optionalEnvString,
     SMTP_PORT: z.coerce.number().int().positive().default(2525),
     SMTP_SECURE: z.stringbool().default(false),
