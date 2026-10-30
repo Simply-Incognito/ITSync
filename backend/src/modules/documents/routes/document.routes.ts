@@ -14,7 +14,7 @@ import { documentUploadSchema } from '../validations/document.validation.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 1, parts: 2 },
 });
 
 function requireIdentity(request: Request) {
@@ -90,17 +90,25 @@ documentRouter.post(
 );
 
 documentRouter.get('/:documentId/download', ...orgAccess, async (request, response) => {
-  const document = await downloadDocument(parseDocumentId(request));
+  const document = await downloadDocument(
+    parseDocumentId(request),
+    new Types.ObjectId(requireIdentity(request).id),
+  );
 
   response.set('Content-Type', document.contentType);
   response.set(
     'Content-Disposition',
     `attachment; filename*=UTF-8''${encodeURIComponent(document.originalName)}`,
   );
+  response.set('Cache-Control', 'private, no-store');
+  response.set('X-Content-Type-Options', 'nosniff');
   response.send(document.buffer);
 });
 
 documentRouter.delete('/:documentId', ...orgAccess, async (request, response) => {
-  await deleteDocument(parseDocumentId(request));
+  await deleteDocument(
+    parseDocumentId(request),
+    new Types.ObjectId(requireIdentity(request).id),
+  );
   response.status(204).end();
 });

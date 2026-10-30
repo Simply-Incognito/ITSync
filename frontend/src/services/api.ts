@@ -1,4 +1,32 @@
-const API_BASE = (import.meta.env.VITE_API_URL ?? '/api/v1').replace(/\/+$/, '')
+/**
+ * Resolves the API origin.
+ *
+ * Accepts either an origin ("https://api.example.com") or a full base
+ * ("https://api.example.com/api/v1") so a trailing mistake in the deployment
+ * environment cannot silently produce duplicated or missing path segments.
+ */
+function resolveApiBase(): string {
+  const configured = import.meta.env.VITE_API_URL?.trim()
+
+  if (!configured) {
+    return '/api/v1'
+  }
+
+  const withoutTrailingSlash = configured.replace(/\/+$/, '')
+
+  return withoutTrailingSlash.endsWith('/api/v1')
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api/v1`
+}
+
+const API_BASE = resolveApiBase()
+
+if (import.meta.env.PROD && !/^https?:\/\//.test(API_BASE)) {
+  console.error(
+    `[ITSync] VITE_API_URL is not configured, so API calls target ${window.location.origin}${API_BASE}. ` +
+      'Write requests will fail with 405. Set VITE_API_URL to the deployed API origin and redeploy.',
+  )
+}
 
 export type AdminUser = {
   _id: string
@@ -160,8 +188,20 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers,
   })
 
+  const contentType = response.headers.get('content-type') ?? ''
+  const isJsonResponse = contentType.includes('application/json')
+
   if (!response.ok) {
-    const body = await response.json().catch(() => undefined) as ApiErrorResponse | undefined
+    if (!isJsonResponse) {
+      // A static host answers writes with 405 and an HTML body, which is the
+      // signature of a missing or wrong VITE_API_URL rather than an API error.
+      throw new Error(
+        `API request to ${endpoint} returned ${response.status} ${response.statusText}. ` +
+          'The request reached the frontend host instead of the API — check VITE_API_URL.',
+      )
+    }
+
+    const body = (await response.json()) as ApiErrorResponse
     const issues = body?.error?.issues
       ?.map(({ path, message }) => `${path.join('.')}: ${message}`)
       .filter(Boolean)
@@ -173,6 +213,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   if (response.status === 204) {
     return {} as T
+  }
+
+  if (!isJsonResponse) {
+    throw new Error(
+      `Expected JSON from ${endpoint} but received "${contentType || 'unknown'}". ` +
+        'VITE_API_URL is probably pointing at the frontend instead of the API.',
+    )
   }
 
   return response.json()

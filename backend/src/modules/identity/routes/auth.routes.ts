@@ -1,5 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import {
+  loginRateLimit,
+  passwordResetRateLimit,
+  registrationRateLimit,
+} from '../../../middleware/rate-limit.js';
 import { validateBody } from '../../../middleware/validate-body.js';
 import {
   completePasswordReset,
@@ -16,19 +21,19 @@ import { registerSchema } from '../validations/auth.validation.js';
 
 export const authRouter = Router();
 
-authRouter.post('/register', validateBody(registerSchema), register);
+authRouter.post('/register', registrationRateLimit, validateBody(registerSchema), register);
 
-authRouter.post('/login', signIn);
+authRouter.post('/login', loginRateLimit, signIn);
 
 authRouter.post('/logout', requireAuthentication, signOut);
 
 authRouter.get('/me', requireAuthentication, currentUser);
 
-authRouter.post('/password/forgot', forgotPassword);
+authRouter.post('/password/forgot', passwordResetRateLimit, forgotPassword);
 
-authRouter.post('/password/reset', completePasswordReset);
+authRouter.post('/password/reset', passwordResetRateLimit, completePasswordReset);
 
-authRouter.post('/password/reset/:token', completePasswordReset);
+authRouter.post('/password/reset/:token', passwordResetRateLimit, completePasswordReset);
 
 authRouter.put('/password', requireAuthentication, updatePassword);
 

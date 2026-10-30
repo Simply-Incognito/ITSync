@@ -24,15 +24,15 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary-50 via-white to-emerald-100">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
+      <section className="relative overflow-hidden bg-paper">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(35,134,83,0.10),transparent_62%)]" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
           <div className="text-center">
             <motion.h1
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="text-4xl md:text-6xl font-extrabold text-slate-900 mb-6"
+              className="text-display font-semibold text-ink mb-6"
             >
               Find Your Perfect
               <span className="block text-primary-700">SIWES Placement</span>
@@ -41,7 +41,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-10"
+              className="text-lg md:text-xl text-ink-muted max-w-2xl mx-auto mb-10"
             >
               Connecting Nigerian students with verified organizations for meaningful
               industrial training experiences.
@@ -54,13 +54,13 @@ export default function Home() {
             >
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-all shadow-lg hover:shadow-xl"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary-600 text-white font-medium rounded-full hover:bg-primary-700 transition-colors"
               >
                 Get Started <ArrowRight size={20} />
               </Link>
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 border-2 border-primary-600 bg-white text-primary-600 font-semibold rounded-xl hover:bg-primary-50 transition-all"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 text-ink font-medium rounded-full ring-1 ring-line hover:bg-surface-soft transition-colors"
               >
                 Sign In
               </Link>

@@ -93,14 +93,18 @@ export async function getNotifications(
 
 export async function markNotificationAsRead(
   notificationId: Types.ObjectId,
+  recipientId: Types.ObjectId,
+  recipientRole: RecipientRole,
 ): Promise<NotificationRecord> {
-  const notification = await NotificationModel.findByIdAndUpdate(
-    notificationId,
+  const notification = await NotificationModel.findOneAndUpdate(
+    { _id: notificationId, recipientId, recipientRole },
     { read: true, readAt: new Date() },
     { new: true, runValidators: true },
   ).lean();
 
   if (!notification) {
+    // Also covers notifications that belong to a different recipient so their
+    // ids cannot be probed.
     throw notFound('Notification was not found.', 'NOTIFICATION_NOT_FOUND');
   }
 
