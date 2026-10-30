@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Shield,
@@ -12,19 +11,11 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { organizationApi } from '../../services/api'
-import type { Organization, OrganizationDocument, OrganizationDocumentType } from '../../types/domain'
-import { getErrorMessage } from '../../utils/errors'
 
 interface RequiredDocument {
   type: OrganizationDocumentType
   label: string
 }
-
-const requiredDocuments: RequiredDocument[] = [
-  { type: 'cac_certificate', label: 'CAC Certificate' },
-  { type: 'representative_authorization', label: 'Representative Authorization' },
-  { type: 'proof_of_address', label: 'Proof of Address' },
-]
 
 type VerificationStatus = 'draft' | 'pending' | 'verified' | 'rejected' | 'suspended'
 type OrganizationDocumentType =
@@ -42,10 +33,10 @@ type VerificationDocument = {
   originalName: string
 }
 
-const requiredDocumentTypes: OrganizationDocumentType[] = [
-  'cac_certificate',
-  'representative_authorization',
-  'proof_of_address',
+const requiredDocuments: RequiredDocument[] = [
+  { type: 'cac_certificate', label: 'CAC Certificate' },
+  { type: 'representative_authorization', label: 'Representative Authorization' },
+  { type: 'proof_of_address', label: 'Proof of Address' },
 ]
 
 export default function OrganizationVerification() {
@@ -294,11 +285,11 @@ export default function OrganizationVerification() {
                   Please upload the following documents to complete your verification:
                 </p>
                 <div className="space-y-4">
-                  {requiredDocumentTypes.map((docType) => {
-                      const uploaded = documents.find((d) => d.documentType === docType)
+                  {requiredDocuments.map((document) => {
+                      const uploaded = documents.find((d) => d.documentType === document.type)
                       return (
                         <div
-                          key={docType}
+                          key={document.type}
                           className="flex items-center justify-between p-4 border border-slate-200 rounded-xl"
                         >
                           <div className="flex items-center gap-3 flex-1">
@@ -309,14 +300,7 @@ export default function OrganizationVerification() {
                             )}
                           </div>
                           <div className="flex-1">
-                            <p className="font-medium text-slate-800">
-                              {docType === 'cac_certificate'
-                                ? 'CAC Certificate'
-                                : docType === 'representative_authorization'
-                                  ? 'Representative Authorization'
-                                  : 'Proof of Address'
-                              }
-                            </p>
+                            <p className="font-medium text-slate-800">{document.label}</p>
                             {uploaded && (
                               <p className="text-sm text-slate-500">{uploaded.originalName}</p>
                             )}
@@ -329,21 +313,21 @@ export default function OrganizationVerification() {
                             ) : (
                               <>
                                 <input
-                                  ref={fileInputRefs[docType]}
+                                  ref={fileInputRefs[document.type]}
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png"
-                                  onChange={(e) => handleFileSelect(e, docType)}
+                                  onChange={(e) => handleFileSelect(e, document.type)}
                                   className="hidden"
                                   disabled={uploadingType !== null}
                                 />
                                 <button
                                   onClick={() => {
-                                    fileInputRefs[docType]?.current?.click()
+                                    fileInputRefs[document.type]?.current?.click()
                                   }}
                                   disabled={uploadingType !== null}
                                   className="px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-full hover:bg-primary-700 transition-colors disabled:opacity-50"
                                 >
-                                  {uploadingType === docType ? 'Uploading...' : 'Upload'}
+                                  {uploadingType === document.type ? 'Uploading...' : 'Upload'}
                                 </button>
                               </>
                             )}
