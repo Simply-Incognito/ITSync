@@ -1,4 +1,5 @@
 import { env } from '../../../config/env.js';
+import { logger } from '../../../config/logger.js';
 import { AppError } from '../../../errors/app-error.js';
 import { AuthToken } from '../models/auth-token.model.js';
 import { Student, type StudentProfileInput } from '../models/student.model.js';
@@ -228,13 +229,16 @@ export async function requestPasswordReset(email: string): Promise<{ resetToken?
         error instanceof Error
           ? (error as Error & { code?: string; responseCode?: number; command?: string })
           : undefined;
-      console.error('Password recovery email delivery failed.', {
-        code: smtpError?.code,
-        responseCode: smtpError?.responseCode,
-        command: smtpError?.command,
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-      });
+      logger.error(
+        {
+          code: smtpError?.code,
+          responseCode: smtpError?.responseCode,
+          command: smtpError?.command,
+          host: env.SMTP_HOST,
+          port: env.SMTP_PORT,
+        },
+        'Password recovery email delivery failed',
+      );
     }
     return {};
   }
