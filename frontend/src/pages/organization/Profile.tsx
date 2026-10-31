@@ -5,6 +5,7 @@ import { Building2, MapPin, User, Save } from 'lucide-react'
 import { organizationApi } from '../../services/api'
 import type { Organization, OrganizationProfileInput } from '../../types/domain'
 import { getErrorMessage } from '../../utils/errors'
+import { notify } from '../../lib/notify'
 
 interface ProfileFormState {
   legalName: string
@@ -59,7 +60,6 @@ export default function OrganizationProfile() {
   const [isFetching, setIsFetching] = useState(true)
   const [saving, setSaving] = useState(false)
   const [fetchError, setFetchError] = useState('')
-  const [message, setMessage] = useState('')
 
   useEffect(() => {
     void fetchOrganization()
@@ -95,7 +95,6 @@ export default function OrganizationProfile() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    setMessage('')
 
     const payload: Partial<OrganizationProfileInput> = {
       legalName: formData.legalName.trim(),
@@ -117,9 +116,9 @@ export default function OrganizationProfile() {
     try {
       const response = await organizationApi.updateProfile(payload)
       setOrganization(response.organization)
-      setMessage('Profile updated successfully!')
+      notify.success('Organization profile updated.')
     } catch (error) {
-      setMessage(getErrorMessage(error, 'Failed to save profile. Please try again.'))
+      notify.error(getErrorMessage(error, 'Failed to save profile. Please try again.'))
     } finally {
       setSaving(false)
     }
@@ -175,18 +174,6 @@ export default function OrganizationProfile() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-3xl font-bold text-slate-800 mb-2">Organization Profile</h1>
           <p className="text-slate-600 mb-8">Manage your organization details</p>
-
-          {message && (
-            <div
-              className={`mb-6 p-4 rounded-xl ${
-                message.includes('success')
-                  ? 'bg-green-50 text-green-700 border border-green-200'
-                  : 'bg-red-50 text-red-700 border border-red-200'
-              }`}
-            >
-              {message}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
             <div className="space-y-6">

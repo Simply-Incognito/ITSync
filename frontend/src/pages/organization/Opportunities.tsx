@@ -5,6 +5,7 @@ import { opportunityApi, organizationApi } from '../../services/api'
 import type { Opportunity, OpportunityInput, WorkArrangement } from '../../types/domain'
 import { getErrorMessage } from '../../utils/errors'
 import { getOpportunityImageChoices } from '../../utils/opportunity-images'
+import { notify } from '../../lib/notify'
 
 interface OpportunityFormState {
   title: string
@@ -44,8 +45,6 @@ export default function OrganizationOpportunities() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
-  const [formError, setFormError] = useState('')
   const [formData, setFormData] = useState<OpportunityFormState>(emptyForm)
   const [organizationIndustry, setOrganizationIndustry] = useState('')
 
@@ -61,10 +60,8 @@ export default function OrganizationOpportunities() {
       ])
       setOpportunities(response.opportunities)
       setOrganizationIndustry(organizationResponse.organization?.industry ?? '')
-      setErrorMessage('')
     } catch (error) {
-      console.error('Failed to fetch opportunities:', error)
-      setErrorMessage(getErrorMessage(error, 'Unable to load opportunities.'))
+      notify.error(getErrorMessage(error, 'Unable to load opportunities.'))
     } finally {
       setLoading(false)
     }
@@ -87,13 +84,11 @@ export default function OrganizationOpportunities() {
       ...emptyForm,
       imageKey: getOpportunityImageChoices(organizationIndustry)[0].id,
     })
-    setFormError('')
     setShowCreateForm(true)
   }
 
   const openEditForm = (opportunity: Opportunity) => {
     setEditingId(opportunity._id)
-    setFormError('')
     setFormData({
       title: opportunity.title,
       description: opportunity.description,
@@ -116,7 +111,6 @@ export default function OrganizationOpportunities() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-    setFormError('')
     const data: OpportunityInput = {
       title: formData.title.trim(),
       description: formData.description.trim(),
@@ -141,34 +135,32 @@ export default function OrganizationOpportunities() {
       await fetchOpportunities()
       setShowCreateForm(false)
       setEditingId(null)
+      notify.success(editingId ? 'Opportunity updated.' : 'Opportunity created as a draft.')
     } catch (error) {
-      console.error('Failed to save opportunity:', error)
-      setFormError(getErrorMessage(error, 'Failed to save opportunity.'))
+      notify.error(getErrorMessage(error, 'Failed to save opportunity.'))
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleSubmitForReview = async (opportunityId: string) => {
-    setErrorMessage('')
     try {
       await opportunityApi.submit(opportunityId)
       await fetchOpportunities()
+      notify.success('Opportunity submitted for review.')
     } catch (error) {
-      console.error('Failed to submit opportunity for review:', error)
-      setErrorMessage(getErrorMessage(error, 'Failed to submit opportunity for review.'))
+      notify.error(getErrorMessage(error, 'Failed to submit opportunity for review.'))
     }
   }
 
   const handleCloseOpportunity = async (opportunityId: string) => {
     if (!window.confirm('Close this opportunity? Students will no longer be able to apply.')) return
-    setErrorMessage('')
     try {
       await opportunityApi.close(opportunityId)
       await fetchOpportunities()
+      notify.success('Applications closed.')
     } catch (error) {
-      console.error('Failed to close opportunity:', error)
-      setErrorMessage(getErrorMessage(error, 'Failed to close opportunity.'))
+      notify.error(getErrorMessage(error, 'Failed to close opportunity.'))
     }
   }
 
@@ -202,12 +194,6 @@ export default function OrganizationOpportunities() {
             </button>
           </div>
 
-          {errorMessage && (
-            <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {errorMessage}
-            </div>
-          )}
-
           {/* Create and edit form */}
           {showCreateForm && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -225,11 +211,6 @@ export default function OrganizationOpportunities() {
                     : 'Save as a draft first. You can edit it before submitting it for review.'}
                 </p>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {formError && (
-                    <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                      {formError}
-                    </div>
-                  )}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Title</label>
                     <input
