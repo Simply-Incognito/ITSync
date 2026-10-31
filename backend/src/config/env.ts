@@ -37,6 +37,7 @@ const envSchema = z
     SMTP_USER: optionalEnvString,
     SMTP_PASSWORD: optionalEnvString,
     SMTP_FROM: optionalEnvEmail,
+    FEEDBACK_EMAIL: z.email().default('codedynamics24@gmail.com'),
   })
   .superRefine((config, context) => {
     if (Boolean(config.SMTP_HOST) !== Boolean(config.SMTP_FROM)) {

@@ -46,3 +46,10 @@ export const passwordResetRateLimit = createLimiter({
   limit: 5,
   message: 'Too many password reset requests. Please try again later.',
 });
+
+/** Limits unsolicited feedback emails from a single address. */
+export const feedbackRateLimit = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  message: 'Too many feedback submissions. Please try again later.',
+});

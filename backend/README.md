@@ -71,6 +71,8 @@ Use references for entities with independent lifecycles, such as users, organiza
 
 See `.env.example`. Configuration is validated at startup; the process exits with a clear configuration error when required values are missing or invalid. Keep `.env` out of version control.
 
+The public `POST /api/v1/feedback` endpoint sends feedback to `FEEDBACK_EMAIL` (defaults to `codedynamics24@gmail.com`) through the configured SMTP provider. Configure `SMTP_HOST`, `SMTP_FROM`, and any required SMTP credentials with a real email-sending provider in deployed environments. The endpoint is rate-limited to five submissions per IP per hour.
+
 ## Current scope
 
 This scaffold includes the API foundation and health routes. Feature modules are intentionally documented placeholders; implement business flows incrementally, starting with identity and profiles, then verified organizations, opportunities, and applications.
