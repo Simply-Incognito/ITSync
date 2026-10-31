@@ -17,6 +17,7 @@ import { administrationRouter } from './modules/administration/routes/administra
 import { studentRouter } from './modules/students/routes/student.routes.js';
 import { opportunityRouter } from './modules/opportunities/routes/opportunity.routes.js';
 import { applicationRouter } from './modules/applications/routes/application.routes.js';
+import { feedbackRouter } from './modules/feedback/feedback.routes.js';
 
 export function createApp() {
   const app = express();
@@ -67,6 +68,7 @@ export function createApp() {
   app.use('/api/v1/students', studentRouter);
   app.use('/api/v1/opportunities', opportunityRouter);
   app.use('/api/v1/administration', administrationRouter);
+  app.use('/api/v1/feedback', feedbackRouter);
 
   app.use(notFoundHandler);
 

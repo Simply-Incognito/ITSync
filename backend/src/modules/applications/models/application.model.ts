@@ -35,7 +35,7 @@ const applicationSchema = new Schema(
       index: true,
     },
     rejectionReason: { type: String, trim: true, maxlength: 2000, default: null },
-    documents: [{ type: Schema.Types.ObjectId, ref: 'OrganizationDocument' }],
+    documents: [{ type: Schema.Types.ObjectId, ref: 'StudentDocument' }],
   },
   { timestamps: true },
 );

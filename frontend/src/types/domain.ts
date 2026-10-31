@@ -22,6 +22,7 @@ export interface StudentProfile {
   fullName: string
   phoneNumber?: string | null
   institution?: string | null
+  matricNumber?: string | null
   department?: string | null
   fieldOfStudy?: string | null
   currentLevel?: string | null
@@ -36,6 +37,7 @@ export interface StudentProfileInput {
   fullName: string
   phoneNumber?: string
   institution?: string
+  matricNumber?: string
   department?: string
   fieldOfStudy?: string
   currentLevel?: string
@@ -137,6 +139,7 @@ export interface Opportunity {
   title: string
   description: string
   fieldOfStudy: string
+  imageKey?: string
   requiredSkills: string[]
   academicRequirements?: string
   location: OpportunityLocation
@@ -157,6 +160,7 @@ export interface OpportunityInput {
   title: string
   description: string
   fieldOfStudy: string
+  imageKey?: string
   requiredSkills?: string[]
   academicRequirements?: string
   location: OpportunityLocation
@@ -191,13 +195,35 @@ export interface Application {
   opportunityId: string | Opportunity
   status: ApplicationStatus
   rejectionReason?: string | null
+  documents?: StudentDocumentSummary[]
   createdAt: string
   updatedAt?: string
 }
 
 export interface ApplicationInput {
   opportunityId: string
-  documents?: string[]
+  studentDocumentIds: string[]
+}
+
+export type StudentVerificationDocumentType = 'student_id' | 'biodata'
+
+export interface StudentDocumentSummary {
+  _id: string
+  documentType: StudentVerificationDocumentType
+  originalName: string
+  contentType: string
+  byteSize: number
+}
+
+export interface UploadedStudentDocument {
+  documentType: StudentVerificationDocumentType
+  originalName: string
+  contentType: string
+  byteSize: number
+  documentId: string
+  storageId: string
+  sha256: string
+  uploadedBy: string
 }
 
 export interface Pagination {

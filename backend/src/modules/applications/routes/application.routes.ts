@@ -9,7 +9,10 @@ import {
   listApplications,
   updateApplicationStatus,
 } from '../services/application.service.js';
-import { updateApplicationStatusSchema } from '../validations/application.validation.js';
+import {
+  createApplicationSchema,
+  updateApplicationStatusSchema,
+} from '../validations/application.validation.js';
 
 export const applicationRouter = Router();
 
@@ -47,10 +50,7 @@ function paginationValue(value: unknown, fallback: number, name: string, maximum
 
 applicationRouter.post('/', ...studentAccess, async (request, response) => {
   const identity = requireIdentity(request);
-  const input = request.body as {
-    opportunityId?: string;
-    studentDocumentIds?: string[];
-  };
+  const input = createApplicationSchema.parse(request.body);
 
   const result = await createApplication(
     {
@@ -60,13 +60,9 @@ applicationRouter.post('/', ...studentAccess, async (request, response) => {
         'A valid opportunityId is required.',
         'INVALID_OPPORTUNITY_ID',
       ),
-      ...(input.studentDocumentIds?.length
-        ? {
-            studentDocumentIds: input.studentDocumentIds.map((documentId) =>
-              parseObjectId(documentId, 'A valid document id is required.', 'INVALID_DOCUMENT_ID'),
-            ),
-          }
-        : {}),
+      studentDocumentIds: input.studentDocumentIds.map((documentId) =>
+        parseObjectId(documentId, 'A valid document id is required.', 'INVALID_DOCUMENT_ID'),
+      ),
     },
     identity.id,
   );
@@ -76,8 +72,10 @@ applicationRouter.post('/', ...studentAccess, async (request, response) => {
 
 applicationRouter.get('/my', ...studentAccess, async (request, response) => {
   const identity = requireIdentity(request);
+  const page = paginationValue(request.query.page, 1, 'page', 100_000);
+  const limit = paginationValue(request.query.limit, 20, 'limit', 100);
   const result = await listApplications(
-    { studentId: new Types.ObjectId(identity.id) },
+    { studentId: new Types.ObjectId(identity.id), page, limit },
     identity.id,
   );
 

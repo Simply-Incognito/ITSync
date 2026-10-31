@@ -25,7 +25,10 @@ vi.mock('../src/modules/identity/services/auth.service.js', async () => {
 vi.mock('../src/modules/applications/services/application.service.js', () => applicationService);
 
 import { createApp } from '../src/app.js';
-import { updateApplicationStatusSchema } from '../src/modules/applications/validations/application.validation.js';
+import {
+  createApplicationSchema,
+  updateApplicationStatusSchema,
+} from '../src/modules/applications/validations/application.validation.js';
 
 const app = createApp();
 
@@ -33,6 +36,7 @@ const studentId = '68d2c50a8c4e1c843a39a201';
 const adminId = '68d2c50a8c4e1c843a39a204';
 const opportunityId = '68d2c50a8c4e1c843a39a205';
 const applicationId = '68d2c50a8c4e1c843a39a206';
+const studentDocumentId = '68d2c50a8c4e1c843a39a207';
 
 const studentIdentity = { id: studentId, email: 'student@example.test', role: 'student' };
 const adminIdentity = { id: adminId, email: 'admin@example.test', role: 'administrator' };
@@ -59,13 +63,14 @@ describe('application routes', () => {
     const response = await request(app)
       .post('/api/v1/applications')
       .set('Authorization', 'Bearer student-token')
-      .send({ opportunityId });
+      .send({ opportunityId, studentDocumentIds: [studentDocumentId] });
 
     expect(response.status).toBe(201);
     expect(applicationService.createApplication).toHaveBeenCalledWith(
       expect.objectContaining({
         studentId: expect.any(Types.ObjectId),
         opportunityId: expect.any(Types.ObjectId),
+        studentDocumentIds: [expect.any(Types.ObjectId)],
       }),
       studentId,
     );
@@ -75,10 +80,23 @@ describe('application routes', () => {
     const response = await request(app)
       .post('/api/v1/applications')
       .set('Authorization', 'Bearer student-token')
-      .send({ opportunityId: 'not-an-object-id' });
+      .send({
+        opportunityId: 'not-an-object-id',
+        studentDocumentIds: [studentDocumentId],
+      });
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('INVALID_OPPORTUNITY_ID');
+  });
+
+  it('requires a student ID or biodata document to apply', async () => {
+    const response = await request(app)
+      .post('/api/v1/applications')
+      .set('Authorization', 'Bearer test-token')
+      .send({ opportunityId });
+
+    expect(response.status).toBe(400);
+    expect(applicationService.createApplication).not.toHaveBeenCalled();
   });
 
   it('prevents duplicate applications', async () => {
@@ -89,7 +107,7 @@ describe('application routes', () => {
     const response = await request(app)
       .post('/api/v1/applications')
       .set('Authorization', 'Bearer student-token')
-      .send({ opportunityId });
+      .send({ opportunityId, studentDocumentIds: [studentDocumentId] });
 
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('DUPLICATE_APPLICATION');
@@ -98,15 +116,20 @@ describe('application routes', () => {
   it('allows a student to view their applications', async () => {
     applicationService.listApplications.mockResolvedValue({
       applications: [{ _id: applicationId, status: 'submitted' }],
-      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      pagination: { page: 2, limit: 100, total: 101, totalPages: 2 },
     });
 
     const response = await request(app)
       .get('/api/v1/applications/my')
+      .query({ page: '2', limit: '100' })
       .set('Authorization', 'Bearer student-token');
 
     expect(response.status).toBe(200);
     expect(response.body.applications).toHaveLength(1);
+    expect(applicationService.listApplications).toHaveBeenCalledWith(
+      { studentId: expect.any(Types.ObjectId), page: 2, limit: 100 },
+      studentId,
+    );
   });
 
   it('allows an administrator to view all applications', async () => {
@@ -187,6 +210,22 @@ describe('application routes', () => {
 });
 
 describe('application status validation', () => {
+  it('requires exactly one verification document for an application', () => {
+    expect(
+      createApplicationSchema.safeParse({
+        opportunityId,
+        studentDocumentIds: [studentDocumentId],
+      }).success,
+    ).toBe(true);
+    expect(createApplicationSchema.safeParse({ opportunityId }).success).toBe(false);
+    expect(
+      createApplicationSchema.safeParse({
+        opportunityId,
+        studentDocumentIds: [studentDocumentId, studentDocumentId],
+      }).success,
+    ).toBe(false);
+  });
+
   it('accepts valid status transitions', () => {
     const result = updateApplicationStatusSchema.safeParse({
       status: 'under_review',

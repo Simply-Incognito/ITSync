@@ -10,6 +10,7 @@ const studentSchema = new Schema(
     fullName: { type: String, required: true, trim: true, maxlength: 120 },
     phoneNumber: { type: String, trim: true, maxlength: 30, default: null },
     institution: { type: String, trim: true, maxlength: 160, default: null },
+    matricNumber: { type: String, trim: true, maxlength: 80, default: null },
     department: { type: String, trim: true, maxlength: 160, default: null },
     fieldOfStudy: { type: String, trim: true, maxlength: 160, default: null },
     currentLevel: { type: String, trim: true, maxlength: 40, default: null },
@@ -29,6 +30,7 @@ export interface StudentProfileInput {
   fullName: string;
   phoneNumber?: string | null | undefined;
   institution?: string | null | undefined;
+  matricNumber?: string | null | undefined;
   department?: string | null | undefined;
   fieldOfStudy?: string | null | undefined;
   currentLevel?: string | null | undefined;

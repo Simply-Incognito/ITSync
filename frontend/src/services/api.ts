@@ -13,6 +13,8 @@ import type {
   RegisterData,
   StudentProfile,
   StudentProfileInput,
+  StudentVerificationDocumentType,
+  UploadedStudentDocument,
   User,
 } from '../types/domain'
 
@@ -120,6 +122,7 @@ export type AdminOpportunity = {
   title: string
   description?: string
   fieldOfStudy?: string
+  imageKey?: string
   requiredSkills?: string[]
   academicRequirements?: string
   status: 'draft' | 'pending_review' | 'published' | 'rejected' | 'closed' | 'suspended'
@@ -281,6 +284,14 @@ export const authApi = {
     request<void>('/auth/logout', { method: 'POST' }),
 }
 
+export const feedbackApi = {
+  send: (data: { name?: string; email?: string; category: 'suggestion' | 'issue' | 'other'; message: string }) =>
+    request<{ message: string }>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+}
+
 export const studentApi = {
   getProfile: () => request<{ student: StudentProfile }>('/students/me'),
   createProfile: (data: StudentProfileInput) =>
@@ -367,7 +378,14 @@ export const applicationApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  listMy: () => request<{ applications: Application[]; pagination: Pagination }>('/applications/my'),
+  listMy: (params: { page?: number; limit?: number } = {}) => {
+    const query = new URLSearchParams()
+    if (params.page !== undefined) query.set('page', String(params.page))
+    if (params.limit !== undefined) query.set('limit', String(params.limit))
+    return request<{ applications: Application[]; pagination: Pagination }>(
+      `/applications/my${query.size ? `?${query}` : ''}`,
+    )
+  },
   listAll: (params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params).toString()}` : ''
     return request<{ applications: Application[]; pagination: Pagination }>(
@@ -383,6 +401,40 @@ export const applicationApi = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+}
+
+export const studentDocumentApi = {
+  upload: async (file: File, documentType: StudentVerificationDocumentType) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('documentType', documentType)
+
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_BASE}/documents/student`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as ApiErrorResponse | undefined
+      throw new Error(body?.error?.message || 'Failed to upload student verification document.')
+    }
+
+    return (await response.json()) as { document: UploadedStudentDocument }
+  },
+  downloadForOrganization: async (applicationId: string, documentId: string) => {
+    const token = localStorage.getItem('token')
+    const response = await fetch(
+      `${API_BASE}/documents/applications/${encodeURIComponent(applicationId)}/student-documents/${encodeURIComponent(documentId)}/download`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+    )
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as ApiErrorResponse | undefined
+      throw new Error(body?.error?.message || 'Failed to download verification document.')
+    }
+    return URL.createObjectURL(await response.blob())
+  },
 }
 
 export const administrationApi = {

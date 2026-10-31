@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Navbar from './Navbar'
 import Footer from './Footer'
+import FeedbackWidget from './FeedbackWidget'
 
 export default function Layout() {
   const { isLoading } = useAuth()
@@ -21,6 +22,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <Footer />
+      <FeedbackWidget />
     </div>
   )
 }

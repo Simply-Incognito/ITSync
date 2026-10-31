@@ -42,8 +42,7 @@ export async function searchOpportunities(
 
   const query: Record<string, unknown> = {
     organizationId: { $in: verifiedOrganizationIds },
-    status: 'published',
-    applicationDeadline: { $gt: new Date() },
+    status: { $in: ['published', 'closed'] },
   };
 
   if (search) {
@@ -113,15 +112,13 @@ export async function getOpportunityFilters() {
   const [fieldOfStudies, locations, industries] = await Promise.all([
     Opportunity.distinct('fieldOfStudy', {
       organizationId: { $in: verifiedOrganizationIds },
-      status: 'published',
-      applicationDeadline: { $gt: new Date() },
+      status: { $in: ['published', 'closed'] },
     }),
     Opportunity.aggregate([
       {
         $match: {
           organizationId: { $in: verifiedOrganizationIds },
-          status: 'published',
-          applicationDeadline: { $gt: new Date() },
+          status: { $in: ['published', 'closed'] },
         },
       },
       {

@@ -3,6 +3,7 @@ import { basename } from 'node:path';
 import mongoose, { type Types } from 'mongoose';
 import { fileTypeFromBuffer } from 'file-type';
 import { AppError } from '../../../errors/app-error.js';
+import { Application } from '../../applications/models/application.model.js';
 import { Organization } from '../../organizations/models/organization.model.js';
 import {
   OrganizationDocument,
@@ -10,13 +11,17 @@ import {
 } from '../../organizations/models/organization-document.model.js';
 import {
   deleteOrganizationDocument,
-  maxOrganizationDocumentBytes,
   storeOrganizationDocument,
 } from '../../organizations/utils/document-storage.js';
+import { Opportunity } from '../../opportunities/models/opportunity.model.js';
+import { StudentDocument, type StudentDocumentType } from '../models/student-document.model.js';
 
 const acceptedMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+const studentVerificationDocumentTypes = new Set<StudentDocumentType>(['student_id', 'biodata']);
+const maxStudentVerificationDocumentBytes = 1 * 1024 * 1024;
+const maxStudentDocumentBytes = 5 * 1024 * 1024;
 
-export const documentTypes = [...organizationDocumentTypes, 'cv'] as const;
+export const documentTypes = [...organizationDocumentTypes, 'cv', 'student_id', 'biodata'] as const;
 
 export type DocumentType = (typeof documentTypes)[number];
 
@@ -37,9 +42,13 @@ export interface DownloadableDocument {
   originalName: string;
 }
 
-async function validateFile(file: Express.Multer.File) {
-  if (file.size < 1 || file.size > maxOrganizationDocumentBytes) {
-    throw new AppError('Documents must be no larger than 5 MB.', 400, 'INVALID_DOCUMENT_SIZE');
+async function validateFile(file: Express.Multer.File, documentType: DocumentType) {
+  const maxBytes = documentType === 'student_id' || documentType === 'biodata'
+    ? maxStudentVerificationDocumentBytes
+    : maxStudentDocumentBytes;
+  if (file.size < 1 || file.size > maxBytes) {
+    const maxSizeLabel = maxBytes === maxStudentVerificationDocumentBytes ? '1 MB' : '5 MB';
+    throw new AppError(`Documents must be no larger than ${maxSizeLabel}.`, 400, 'INVALID_DOCUMENT_SIZE');
   }
 
   const detectedType = await fileTypeFromBuffer(file.buffer);
@@ -122,7 +131,7 @@ export async function uploadOrganizationDocument(input: {
     );
   }
 
-  await validateFile(file);
+  await validateFile(file, documentType);
 
   const stored = await storeOrganizationDocument(file, {
     organizationId: String(organization._id),
@@ -161,17 +170,18 @@ export async function uploadStudentDocument(input: {
 }): Promise<UploadedDocument> {
   const { file, documentType, uploadedBy } = input;
 
-  const detectedType = await validateFile(file);
+  const detectedType = await validateFile(file, documentType);
   const originalName = safeOriginalName(file.originalname);
   const sha256 = createHash('sha256').update(file.buffer).digest('hex');
   const bucket = getStudentDocumentBucket();
+  const metadata = {
+    studentId: uploadedBy,
+    documentType,
+    sha256,
+  };
   const uploadStream = bucket.openUploadStream(originalName, {
     contentType: detectedType.mime,
-    metadata: {
-      studentId: uploadedBy,
-      documentType,
-      sha256,
-    },
+    metadata,
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -182,16 +192,108 @@ export async function uploadStudentDocument(input: {
 
   const storageId = uploadStream.id as Types.ObjectId;
 
-  return {
-    documentId: storageId,
-    storageId,
-    originalName,
-    contentType: detectedType.mime,
-    byteSize: file.size,
-    sha256,
-    documentType,
-    uploadedBy,
-  };
+  try {
+    const record = await StudentDocument.create({
+      uploadedBy,
+      documentType,
+      originalName,
+      contentType: detectedType.mime,
+      byteSize: file.size,
+      sha256,
+      storageId,
+    });
+
+    return {
+      documentId: record._id,
+      storageId,
+      originalName,
+      contentType: detectedType.mime,
+      byteSize: file.size,
+      sha256,
+      documentType,
+      uploadedBy,
+    };
+  } catch (error) {
+    await bucket.delete(storageId).catch(() => undefined);
+    throw error;
+  }
+}
+
+export async function assertStudentVerificationDocuments(
+  documentIds: Types.ObjectId[],
+  studentId: Types.ObjectId,
+) {
+  if (documentIds.length !== 1) {
+    throw new AppError(
+      'Upload either your student ID or biodata to apply.',
+      400,
+      'VERIFICATION_DOCUMENT_REQUIRED',
+    );
+  }
+
+  const documents = await StudentDocument.find({
+    _id: { $in: documentIds },
+    uploadedBy: studentId,
+    documentType: { $in: [...studentVerificationDocumentTypes] },
+  })
+    .select('_id')
+    .lean();
+
+  if (documents.length !== 1) {
+    throw new AppError(
+      'Upload a valid student ID or biodata file before applying.',
+      400,
+      'INVALID_VERIFICATION_DOCUMENT',
+    );
+  }
+}
+
+export async function downloadStudentApplicationDocument(
+  applicationId: Types.ObjectId,
+  documentId: Types.ObjectId,
+  representativeUserId: Types.ObjectId,
+): Promise<DownloadableDocument> {
+  const organization = await Organization.findOne({ representativeUserId })
+    .select('_id')
+    .lean();
+  if (!organization) throw new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND');
+
+  const application = await Application.findOne({
+    _id: applicationId,
+    documents: documentId,
+  })
+    .select('opportunityId')
+    .lean();
+  if (!application) throw new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND');
+
+  const opportunity = await Opportunity.findOne({
+    _id: application.opportunityId,
+    organizationId: organization._id,
+  })
+    .select('_id')
+    .lean();
+  if (!opportunity) throw new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND');
+
+  const record = await StudentDocument.findById(documentId).lean();
+  if (!record) throw new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND');
+
+  const bucket = getStudentDocumentBucket();
+  const chunks: Buffer[] = [];
+
+  return new Promise<DownloadableDocument>((resolve, reject) => {
+    const downloadStream = bucket.openDownloadStream(record.storageId);
+    downloadStream.on('data', (chunk: Buffer) => chunks.push(chunk));
+    downloadStream.on('error', () =>
+      reject(new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND')),
+    );
+    downloadStream.on('end', () =>
+      resolve({
+        buffer: Buffer.concat(chunks),
+        contentType: record.contentType,
+        originalName: record.originalName,
+      }),
+    );
+  });
 }
 
 async function findOrganizationDocumentRecord(documentId: Types.ObjectId) {
@@ -263,5 +365,3 @@ export async function deleteDocument(
   await OrganizationDocument.deleteOne({ _id: record._id });
   await deleteOrganizationDocument(record.storageId).catch(() => undefined);
 }
-
-export { maxOrganizationDocumentBytes };

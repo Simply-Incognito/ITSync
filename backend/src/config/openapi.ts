@@ -26,6 +26,35 @@ export const openApiDocument = {
         },
       },
     },
+    '/feedback': {
+      post: {
+        summary: 'Send feedback to the platform support inbox',
+        tags: ['Feedback'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['category', 'message'],
+                properties: {
+                  name: { type: 'string', maxLength: 120 },
+                  email: { type: 'string', format: 'email', maxLength: 254 },
+                  category: { type: 'string', enum: ['suggestion', 'issue', 'other'] },
+                  message: { type: 'string', minLength: 10, maxLength: 4000 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '202': { description: 'Feedback email accepted for delivery.' },
+          '400': { description: 'Invalid feedback details.' },
+          '429': { description: 'Feedback submission limit reached.' },
+          '503': { description: 'Feedback email delivery is not configured.' },
+        },
+      },
+    },
     '/auth/register': {
       post: {
         summary: 'Register a student or organization representative account',
@@ -332,6 +361,27 @@ export const openApiDocument = {
         summary: 'Submit an application for a published opportunity',
         tags: ['Applications'],
         security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['opportunityId', 'studentDocumentIds'],
+                properties: {
+                  opportunityId: { type: 'string' },
+                  studentDocumentIds: {
+                    type: 'array',
+                    minItems: 1,
+                    maxItems: 1,
+                    items: { type: 'string' },
+                    description: 'One uploaded student ID or biodata document.',
+                  },
+                },
+              },
+            },
+          },
+        },
         responses: {
           '201': { description: 'Application submitted successfully.' },
           '400': { description: 'Application deadline passed or opportunity not available.' },
@@ -816,9 +866,9 @@ export const openApiDocument = {
         },
       },
     },
-    '/documents/student/upload': {
+    '/documents/student': {
       post: {
-        summary: 'Upload a student document (CV, supporting files)',
+        summary: 'Upload a student ID or biodata for opportunity application verification',
         tags: ['Documents'],
         security: [{ bearerAuth: [] }],
         requestBody: {
@@ -831,7 +881,7 @@ export const openApiDocument = {
                 properties: {
                   documentType: {
                     type: 'string',
-                    enum: ['cv', 'other'],
+                    enum: ['student_id', 'biodata', 'cv'],
                   },
                   file: { type: 'string', format: 'binary' },
                 },
@@ -841,39 +891,24 @@ export const openApiDocument = {
         },
         responses: {
           '201': { description: 'Document uploaded successfully.' },
-          '400': { description: 'Invalid document or verification state.' },
-          '413': { description: 'Document exceeds 5 MB.' },
+          '400': { description: 'Invalid file or student ID/biodata exceeds 1 MB.' },
+          '413': { description: 'Document exceeds the 5 MB upload limit.' },
         },
       },
     },
-    '/documents/student/:documentId/download': {
+    '/documents/applications/:applicationId/student-documents/:documentId/download': {
       get: {
-        summary: 'Download a student document',
+        summary: 'Download a student verification document attached to an organization application',
         tags: ['Documents'],
         security: [{ bearerAuth: [] }],
         parameters: [
+          { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
           { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
         ],
         responses: {
           '200': { description: 'Document file.' },
           '401': { description: 'Authentication required.' },
-          '403': { description: 'Student role required.' },
-          '404': { description: 'Document not found.' },
-        },
-      },
-    },
-    '/documents/student/:documentId': {
-      delete: {
-        summary: 'Delete a student document',
-        tags: ['Documents'],
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
-        ],
-        responses: {
-          '204': { description: 'Document deleted.' },
-          '401': { description: 'Authentication required.' },
-          '403': { description: 'Student role required.' },
+          '403': { description: 'Organization representative role required.' },
           '404': { description: 'Document not found.' },
         },
       },
