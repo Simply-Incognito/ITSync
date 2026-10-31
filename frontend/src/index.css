@@ -55,6 +55,12 @@
   --green: #238653;
   --green-dark: #1d7047;
   --green-pale: #e3f8eb;
+  --color-paper: #fcfcfa;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f7f7f4;
+  --color-line: #e2e1de;
+  --color-ink: #191714;
+  --color-ink-muted: #6e6963;
   --shadow-card: 0 1px 2px rgba(25, 23, 20, 0.04), 0 8px 24px rgba(25, 23, 20, 0.05);
   color-scheme: light;
 }
@@ -64,13 +70,13 @@
 }
 
 html {
-  min-width: 320px;
+  min-width: 0;
   scroll-behavior: smooth;
   scrollbar-gutter: stable;
 }
 
 body {
-  min-width: 320px;
+  min-width: 0;
   min-height: 100vh;
   margin: 0;
   background:
@@ -344,14 +350,20 @@ button,
 html[data-theme="dark"] {
   color-scheme: dark;
 
-  --surface: #16140f;
-  --surface-soft: #1e1b15;
-  --border: #2e2a22;
-  --text: #f5f2ec;
-  --muted: #a8a29a;
+  --surface: #141b16;
+  --surface-soft: #1b241e;
+  --border: #2d3a31;
+  --text: #f2f6f2;
+  --muted: #b0bbb2;
   --green: #63d99b;
   --green-dark: #8ce8b3;
   --green-pale: #1c3c2b;
+  --color-paper: #0f1411;
+  --color-surface: #141b16;
+  --color-surface-soft: #1b241e;
+  --color-line: #2d3a31;
+  --color-ink: #f2f6f2;
+  --color-ink-muted: #b0bbb2;
   --shadow-card: 0 14px 36px rgba(0, 0, 0, 0.24);
 }
 
