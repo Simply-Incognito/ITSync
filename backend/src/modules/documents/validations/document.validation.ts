@@ -1,10 +1,15 @@
 import { z } from 'zod';
-import { documentTypes } from '../services/document.service.js';
+import { organizationDocumentTypes } from '../../organizations/models/organization-document.model.js';
+import { studentDocumentTypes } from '../models/student-document.model.js';
 
-export const documentUploadSchema = z
+export const studentDocumentUploadSchema = z
   .object({
-    documentType: z.enum(documentTypes),
+    documentType: z.enum(studentDocumentTypes),
   })
   .strict();
 
-export type DocumentUploadInput = z.infer<typeof documentUploadSchema>;
+export const organizationDocumentUploadSchema = z
+  .object({
+    documentType: z.enum(organizationDocumentTypes),
+  })
+  .strict();

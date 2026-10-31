@@ -24,10 +24,15 @@ vi.mock('../src/modules/organizations/utils/document-storage.js', () => ({
   maxOrganizationDocumentBytes: 5 * 1024 * 1024,
 }));
 
-import { deleteDocument } from '../src/modules/documents/services/document.service.js';
+import {
+  deleteDocument,
+  downloadStudentApplicationDocument,
+  uploadStudentDocument,
+} from '../src/modules/documents/services/document.service.js';
 import { Organization } from '../src/modules/organizations/models/organization.model.js';
 import { OrganizationDocument } from '../src/modules/organizations/models/organization-document.model.js';
 import { deleteOrganizationDocument } from '../src/modules/organizations/utils/document-storage.js';
+import { studentDocumentUploadSchema } from '../src/modules/documents/validations/document.validation.js';
 
 const recordId = new Types.ObjectId('68d2c50a8c4e1c843a39a300');
 const storageId = new Types.ObjectId('68d2c50a8c4e1c843a39a301');
@@ -70,6 +75,51 @@ describe('document access control', () => {
 
     expect(OrganizationDocument.findOne).toHaveBeenCalledWith({
       $or: [{ _id: recordId }, { storageId: recordId }],
+    });
+  });
+
+  describe('student verification document validation', () => {
+    it('accepts student ID or biodata document types', () => {
+      expect(studentDocumentUploadSchema.safeParse({ documentType: 'student_id' }).success).toBe(true);
+      expect(studentDocumentUploadSchema.safeParse({ documentType: 'biodata' }).success).toBe(true);
+    });
+
+    it.each(['student_id', 'biodata'] as const)(
+      'rejects %s files larger than 1 MB',
+      async (documentType) => {
+        await expect(
+          uploadStudentDocument({
+            file: {
+              size: 1024 * 1024 + 1,
+              buffer: Buffer.alloc(0),
+              originalname: 'verification.pdf',
+            } as Express.Multer.File,
+            documentType,
+            uploadedBy: representativeId,
+          }),
+        ).rejects.toMatchObject({
+          statusCode: 400,
+          code: 'INVALID_DOCUMENT_SIZE',
+          message: 'Documents must be no larger than 1 MB.',
+        });
+      },
+    );
+  });
+
+  describe('student verification document access', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('does not disclose student documents to users without an organization profile', async () => {
+      mockOrganizationLookup(null);
+
+      await expect(
+        downloadStudentApplicationDocument(recordId, storageId, representativeId),
+      ).rejects.toMatchObject({
+        statusCode: 404,
+        code: 'DOCUMENT_NOT_FOUND',
+      });
     });
   });
 
