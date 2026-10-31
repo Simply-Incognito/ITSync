@@ -6,8 +6,9 @@ import {
   type PointerEvent,
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, MessageCircle, Send, X } from "lucide-react";
+import { MessageCircle, Send, X } from "lucide-react";
 import { feedbackApi } from "../services/api";
+import { notify } from "../lib/notify";
 
 type Position = { left: number; top: number };
 type FeedbackCategory = "suggestion" | "issue" | "other";
@@ -67,8 +68,6 @@ export default function FeedbackWidget() {
   const [position, setPosition] = useState(getInitialPosition);
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [error, setError] = useState("");
   const dragStart = useRef<{
     pointerId: number;
     x: number;
@@ -96,12 +95,6 @@ export default function FeedbackWidget() {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!showSuccessToast) return;
-    const timeoutId = window.setTimeout(() => setShowSuccessToast(false), 5000);
-    return () => window.clearTimeout(timeoutId);
-  }, [showSuccessToast]);
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0) return;
@@ -140,18 +133,15 @@ export default function FeedbackWidget() {
       dragged.current = false;
       return;
     }
-    setError("");
-    setShowSuccessToast(false);
     setIsOpen(true);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError("");
     const formData = new FormData(event.currentTarget);
     const category = getFeedbackCategory(formData.get("category"));
     if (!category) {
-      setError("Select a feedback type before sending.");
+      notify.error("Select a feedback type before sending.");
       return;
     }
     setIsSubmitting(true);
@@ -164,9 +154,9 @@ export default function FeedbackWidget() {
         message: String(formData.get("message") ?? ""),
       });
       setIsOpen(false);
-      setShowSuccessToast(true);
+      notify.success("Feedback sent. Thanks for helping us improve ITSync.");
     } catch (submitError) {
-      setError(
+      notify.error(
         submitError instanceof Error
           ? submitError.message
           : "Unable to send feedback. Please try again.",
@@ -295,15 +285,6 @@ export default function FeedbackWidget() {
                   />
                 </label>
 
-                {error && (
-                  <p
-                    role="alert"
-                    className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"
-                  >
-                    {error}
-                  </p>
-                )}
-
                 <div className="flex flex-col-reverse gap-3 pt-1 sm:flex-row sm:justify-end">
                   <button
                     type="button"
@@ -323,38 +304,6 @@ export default function FeedbackWidget() {
                 </div>
               </form>
             </motion.section>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showSuccessToast && (
-          <motion.div
-            role="status"
-            aria-live="polite"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed left-0 right-0 top-20 z-[80] mx-auto flex w-[calc(100%-2rem)] max-w-sm items-start gap-3 rounded-2xl border border-primary-200 bg-surface p-4 text-ink shadow-xl"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700">
-              <Check size={18} aria-hidden="true" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-ink">Feedback sent</p>
-              <p className="mt-0.5 text-sm text-ink-muted">
-                Thanks for helping us improve ITSync.
-              </p>
-            </div>
-            <button
-              type="button"
-              aria-label="Dismiss notification"
-              onClick={() => setShowSuccessToast(false)}
-              className="rounded-full p-1 text-ink-muted transition hover:bg-surface-soft hover:text-ink"
-            >
-              <X size={18} />
-            </button>
           </motion.div>
         )}
       </AnimatePresence>
