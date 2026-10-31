@@ -433,9 +433,9 @@ export default function StudentOpportunities() {
 
           <form
             onSubmit={handleSearch}
-            className="relative rounded-2xl border border-slate-200 bg-white shadow-sm"
+            className="relative rounded-xl border border-slate-200 bg-white"
           >
-            <div className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center px-2">
+            <div className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center px-1">
               <div className="-mx-1 flex min-w-0 items-center overflow-x-auto sm:mx-0 sm:shrink-0">
                 <div className="flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-50 p-0.5">
                   {tabs.map((tab) => (
@@ -444,7 +444,7 @@ export default function StudentOpportunities() {
                       type="button"
                       aria-pressed={activeTab === tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`whitespace-nowrap rounded-lg px-1.5 py-1 text-sm font-medium transition sm:px-2 sm:py-2 ${
+                      className={`whitespace-nowrap rounded-lg px-1 py-0.5 text-sm font-medium transition sm:px-2 sm:py-1 ${
                         activeTab === tab.id
                           ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200'
                           : 'text-slate-600 hover:text-slate-900'
@@ -452,7 +452,7 @@ export default function StudentOpportunities() {
                     >
                       {tab.label}
                       {tab.id !== 'all' && (
-                        <span className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-primary-700">
+                        <span className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-primary-100 px-1 py-0.5 text-xs font-semibold leading-none text-primary-700">
                           {tab.id === 'for-you'
                             ? recommendedOpportunities.length
                             : tab.id === 'saved'
