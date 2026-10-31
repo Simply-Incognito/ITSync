@@ -433,10 +433,10 @@ export default function StudentOpportunities() {
 
           <form
             onSubmit={handleSearch}
-            className="opportunity-search-panel relative mb-5 rounded-2xl border border-slate-200 bg-white p-px shadow-sm"
+            className="relative rounded-2xl border border-slate-200 bg-white shadow-sm"
           >
-            <div className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center">
-              <div className="-mx-1 flex min-w-0 items-center overflow-x-auto px-1 sm:mx-0 sm:shrink-0">
+            <div className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center px-2">
+              <div className="-mx-1 flex min-w-0 items-center overflow-x-auto sm:mx-0 sm:shrink-0">
                 <div className="flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-50 p-0.5">
                   {tabs.map((tab) => (
                     <button
@@ -444,7 +444,7 @@ export default function StudentOpportunities() {
                       type="button"
                       aria-pressed={activeTab === tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium transition sm:px-3 sm:py-2 ${
+                      className={`whitespace-nowrap rounded-lg px-1.5 py-1 text-sm font-medium transition sm:px-2 sm:py-2 ${
                         activeTab === tab.id
                           ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200'
                           : 'text-slate-600 hover:text-slate-900'
@@ -473,7 +473,7 @@ export default function StudentOpportunities() {
                   onChange={(event) => setSearch(event.target.value)}
                   aria-label="Search opportunities"
                   placeholder="Search by title, location, or field..."
-                  className="min-w-0 flex-1 border-0 bg-transparent px-1.5 py-1.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:ring-0 sm:px-2"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:ring-0 sm:px-2"
                 />
                 <button
                   type="button"
