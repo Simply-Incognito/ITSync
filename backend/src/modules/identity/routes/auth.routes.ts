@@ -47,6 +47,7 @@ authRouter.patch(
         fullName: z.string().trim().min(2).max(120).optional(),
         phoneNumber: z.string().trim().max(30).nullable().optional(),
         institution: z.string().trim().max(160).nullable().optional(),
+        matricNumber: z.string().trim().max(80).nullable().optional(),
         department: z.string().trim().max(160).nullable().optional(),
         fieldOfStudy: z.string().trim().max(160).nullable().optional(),
         currentLevel: z.string().trim().max(40).nullable().optional(),
