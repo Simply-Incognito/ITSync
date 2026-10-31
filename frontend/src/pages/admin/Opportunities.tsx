@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BriefcaseBusiness, MapPin } from "lucide-react";
 import { opportunityAdminApi, type AdminOpportunity } from "../../services/api";
+import { notify } from "../../lib/notify";
 
 const statuses: AdminOpportunity["status"][] = [
   "pending_review",
@@ -30,17 +31,14 @@ export default function AdminOpportunities() {
   const [opportunities, setOpportunities] = useState<AdminOpportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   const loadOpportunities = useCallback(async () => {
     setLoading(true);
-    setError("");
     try {
       const response = await opportunityAdminApi.listForReview(status);
       setOpportunities(response.opportunities);
     } catch (requestError) {
-      setError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not load opportunities.",
@@ -66,7 +64,7 @@ export default function AdminOpportunities() {
           : "Reason for suspending this opportunity:";
       reason = window.prompt(prompt)?.trim() ?? "";
       if (reason.length < 10) {
-        if (reason) setError("Enter a reason of at least 10 characters.");
+        if (reason) notify.error("Enter a reason of at least 10 characters.");
         return;
       }
     } else if (!window.confirm(`Approve and publish "${opportunity.title}"?`)) {
@@ -74,20 +72,18 @@ export default function AdminOpportunities() {
     }
 
     setUpdatingId(opportunity._id);
-    setError("");
-    setNotice("");
     try {
       if (action === "approve")
         await opportunityAdminApi.approve(opportunity._id);
       else if (action === "reject")
         await opportunityAdminApi.reject(opportunity._id, reason);
       else await opportunityAdminApi.suspend(opportunity._id, reason);
-      setNotice(
+      notify.success(
         `Opportunity ${action === "approve" ? "approved" : `${action}ed`} successfully.`,
       );
       await loadOpportunities();
     } catch (requestError) {
-      setError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not update opportunity review.",
@@ -131,23 +127,6 @@ export default function AdminOpportunities() {
           {opportunities.length === 1 ? "opportunity" : "opportunities"}
         </p>
       </div>
-
-      {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"
-        >
-          {error}
-        </div>
-      )}
-      {notice && (
-        <div
-          role="status"
-          className="rounded-xl border border-primary-200 bg-primary-50 p-4 text-sm text-primary-800"
-        >
-          {notice}
-        </div>
-      )}
 
       {loading ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">

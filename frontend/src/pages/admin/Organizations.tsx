@@ -8,6 +8,7 @@ import {
   type OrganizationReviewDocument,
   type OrganizationReviewProfile,
 } from "../../services/api";
+import { notify } from "../../lib/notify";
 
 const pageSize = 20;
 const statuses = [
@@ -66,13 +67,10 @@ export default function AdminOrganizations() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [selectedOrganization, setSelectedOrganization] =
     useState<AdminOrganization | null>(null);
   const [review, setReview] = useState<ReviewDetails | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
-  const [reviewError, setReviewError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
   const [openingDocumentId, setOpeningDocumentId] = useState("");
   const [registrySource, setRegistrySource] = useState("");
@@ -93,7 +91,6 @@ export default function AdminOrganizations() {
 
   const loadOrganizations = useCallback(async () => {
     setLoading(true);
-    setError("");
     try {
       const response = await administrationApi.listOrganizations({
         page,
@@ -104,7 +101,7 @@ export default function AdminOrganizations() {
       setTotal(response.pagination.total);
       setTotalPages(Math.max(1, response.pagination.totalPages));
     } catch (requestError) {
-      setError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not load organizations.",
@@ -121,7 +118,6 @@ export default function AdminOrganizations() {
   const closeReview = useCallback(() => {
     setSelectedOrganization(null);
     setReview(null);
-    setReviewError("");
     setReason("");
     setRegistrySource("");
     setRegistryReference("");
@@ -138,12 +134,11 @@ export default function AdminOrganizations() {
   async function openReview(organization: AdminOrganization) {
     setSelectedOrganization(organization);
     setReview(null);
-    setReviewError("");
     setReviewLoading(true);
     try {
       setReview(await organizationAdminApi.getReview(organization._id));
     } catch (requestError) {
-      setReviewError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not load organization review.",
@@ -161,7 +156,6 @@ export default function AdminOrganizations() {
 
   async function submitReviewAction(action: ReviewStatus) {
     if (!selectedOrganization || !review) return;
-    setReviewError("");
     setActionBusy(true);
     try {
       if (action === "verified") {
@@ -170,7 +164,7 @@ export default function AdminOrganizations() {
           !registryReference.trim() ||
           !verificationChecks.every(([key]) => checks[key])
         ) {
-          setReviewError(
+          notify.error(
             "Provide the registry source and reference, and confirm every verification check.",
           );
           return;
@@ -189,7 +183,7 @@ export default function AdminOrganizations() {
         });
       } else {
         if (reason.trim().length < 10) {
-          setReviewError("Enter a reason of at least 10 characters.");
+          notify.error("Enter a reason of at least 10 characters.");
           return;
         }
         if (action === "rejected") {
@@ -205,11 +199,11 @@ export default function AdminOrganizations() {
         }
       }
 
-      setNotice(`${selectedOrganization.legalName} was ${action}.`);
+      notify.success(`${selectedOrganization.legalName} was marked ${action}.`);
       closeReview();
       await loadOrganizations();
     } catch (requestError) {
-      setReviewError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not update organization review.",
@@ -222,7 +216,6 @@ export default function AdminOrganizations() {
   async function downloadDocument(document: OrganizationReviewDocument) {
     if (!selectedOrganization) return;
     setOpeningDocumentId(document.id);
-    setReviewError("");
     try {
       const url = await organizationAdminApi.openDocument(
         selectedOrganization._id,
@@ -237,7 +230,7 @@ export default function AdminOrganizations() {
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (requestError) {
-      setReviewError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not download document.",
@@ -276,23 +269,6 @@ export default function AdminOrganizations() {
         </label>
         <p className="text-sm text-slate-500">{total.toLocaleString()} total</p>
       </div>
-
-      {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"
-        >
-          {error}
-        </div>
-      )}
-      {notice && (
-        <div
-          role="status"
-          className="rounded-xl border border-primary-200 bg-primary-50 p-4 text-sm text-primary-800"
-        >
-          {notice}
-        </div>
-      )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
@@ -412,15 +388,6 @@ export default function AdminOrganizations() {
               </p>
             ) : review ? (
               <div className="space-y-6 p-6">
-                {reviewError && (
-                  <div
-                    role="alert"
-                    className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
-                  >
-                    {reviewError}
-                  </div>
-                )}
-
                 <section>
                   <h4 className="mb-3 font-semibold text-slate-900">
                     Organization profile

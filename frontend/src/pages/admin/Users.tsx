@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Search, ShieldAlert, UserRound } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { administrationApi, type AdminUser } from "../../services/api";
+import { notify } from "../../lib/notify";
 
 const pageSize = 20;
 
@@ -23,12 +24,9 @@ export default function AdminUsers() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
-    setError("");
     try {
       const response = await administrationApi.listUsers({
         page,
@@ -41,7 +39,7 @@ export default function AdminUsers() {
       setTotal(response.pagination.total);
       setTotalPages(Math.max(1, response.pagination.totalPages));
     } catch (requestError) {
-      setError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not load users.",
@@ -71,16 +69,14 @@ export default function AdminUsers() {
       return;
 
     setUpdatingId(target._id);
-    setError("");
-    setNotice("");
     try {
       await administrationApi.updateUserStatus(target._id, nextStatus);
-      setNotice(
+      notify.success(
         `Account ${nextStatus === "suspended" ? "suspended" : "reactivated"} successfully.`,
       );
       await loadUsers();
     } catch (requestError) {
-      setError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not update account status.",
@@ -156,23 +152,6 @@ export default function AdminUsers() {
           Search
         </button>
       </form>
-
-      {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"
-        >
-          {error}
-        </div>
-      )}
-      {notice && (
-        <div
-          role="status"
-          className="rounded-xl border border-primary-200 bg-primary-50 p-4 text-sm text-primary-800"
-        >
-          {notice}
-        </div>
-      )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">

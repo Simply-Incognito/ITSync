@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Activity as ActivityIcon } from "lucide-react";
 import { administrationApi, type AdminActivityEvent } from "../../services/api";
+import { notify } from "../../lib/notify";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -12,7 +13,6 @@ function formatDate(value: string) {
 export default function AdminActivity() {
   const [activities, setActivities] = useState<AdminActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -23,7 +23,7 @@ export default function AdminActivity() {
       })
       .catch((requestError: unknown) => {
         if (active)
-          setError(
+          notify.error(
             requestError instanceof Error
               ? requestError.message
               : "Could not load activity.",
@@ -48,15 +48,6 @@ export default function AdminActivity() {
           actions.
         </p>
       </header>
-
-      {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"
-        >
-          {error}
-        </div>
-      )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
