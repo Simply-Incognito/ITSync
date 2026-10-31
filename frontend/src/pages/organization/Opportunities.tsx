@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Briefcase, Clock, CheckCircle, XCircle, Edit, type LucideIcon } from 'lucide-react'
+import { Plus, Briefcase, Clock, CheckCircle, XCircle, Edit, Eye, type LucideIcon } from 'lucide-react'
 import { opportunityApi, organizationApi } from '../../services/api'
 import type { Opportunity, OpportunityInput, WorkArrangement } from '../../types/domain'
 import { getErrorMessage } from '../../utils/errors'
@@ -463,7 +463,36 @@ export default function OrganizationOpportunities() {
                         {opp.status.replace('_', ' ')}
                       </span>
                     </div>
-                    <div className="mt-4 flex gap-3">
+                    <details className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+                      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-600 [&::-webkit-details-marker]:hidden">
+                        <Eye size={16} aria-hidden="true" />
+                        View details
+                      </summary>
+                      <div className="grid gap-4 border-t border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <p className="font-semibold text-slate-800">Description</p>
+                          <p className="mt-1 whitespace-pre-line">{opp.description}</p>
+                        </div>
+                        <p><span className="font-semibold text-slate-800">Location:</span> {[opp.location.city, opp.location.state, opp.location.country].filter(Boolean).join(', ')}</p>
+                        <p><span className="font-semibold text-slate-800">Work arrangement:</span> {opp.workArrangement.replace('_', ' ')}</p>
+                        <p><span className="font-semibold text-slate-800">Duration:</span> {opp.durationWeeks} weeks</p>
+                        <p><span className="font-semibold text-slate-800">Available slots:</span> {opp.availableSlots}</p>
+                        <p><span className="font-semibold text-slate-800">Application deadline:</span> {new Date(opp.applicationDeadline).toLocaleDateString()}</p>
+                        {opp.requiredSkills.length > 0 && (
+                          <p><span className="font-semibold text-slate-800">Required skills:</span> {opp.requiredSkills.join(', ')}</p>
+                        )}
+                        {opp.academicRequirements && (
+                          <p className="whitespace-pre-line"><span className="font-semibold text-slate-800">Academic requirements:</span> {opp.academicRequirements}</p>
+                        )}
+                        {opp.requiredDocuments.length > 0 && (
+                          <p><span className="font-semibold text-slate-800">Required documents:</span> {opp.requiredDocuments.join(', ')}</p>
+                        )}
+                        {opp.additionalRequirements && (
+                          <p className="whitespace-pre-line"><span className="font-semibold text-slate-800">Additional requirements:</span> {opp.additionalRequirements}</p>
+                        )}
+                      </div>
+                    </details>
+                    <div className="mt-4 flex flex-wrap gap-3">
                       {(opp.status === 'draft' || opp.status === 'rejected') && (
                         <>
                           <button
