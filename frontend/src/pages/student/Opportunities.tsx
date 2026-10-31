@@ -444,7 +444,7 @@ export default function StudentOpportunities() {
                       type="button"
                       aria-pressed={activeTab === tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`whitespace-nowrap rounded-lg px-1 py-0.5 text-sm font-medium transition sm:px-2 sm:py-1 ${
+                      className={`whitespace-nowrap rounded-lg px-1 py-0.5 text-xs font-medium transition sm:px-2 sm:py-1 ${
                         activeTab === tab.id
                           ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200'
                           : 'text-slate-600 hover:text-slate-900'
@@ -473,7 +473,7 @@ export default function StudentOpportunities() {
                   onChange={(event) => setSearch(event.target.value)}
                   aria-label="Search opportunities"
                   placeholder="Search by title, location, or field..."
-                  className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:ring-0 sm:px-2"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:ring-0 sm:px-2"
                 />
                 <button
                   type="button"
