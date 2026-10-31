@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import TagInput from '../../components/TagInput'
+import { notify } from '../../lib/notify'
 
 const profileSections = [
   { id: 'about', label: 'About', icon: User },
@@ -114,8 +115,6 @@ export default function StudentProfile() {
     skills: [] as string[],
   })
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [saveError, setSaveError] = useState(false)
 
   useEffect(() => {
     if (studentProfile) {
@@ -143,14 +142,11 @@ export default function StudentProfile() {
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((current) => ({ ...current, [event.target.name]: event.target.value }))
-    setMessage('')
   }
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setLoading(true)
-    setMessage('')
-    setSaveError(false)
 
     try {
       await updateProfile({
@@ -173,10 +169,9 @@ export default function StudentProfile() {
           : undefined,
         skills: formData.skills,
       })
-      setMessage('Your profile has been saved.')
+      notify.success('Your profile has been saved.')
     } catch (error) {
-      setSaveError(true)
-      setMessage(error instanceof Error ? error.message : 'Unable to save your profile. Please try again.')
+      notify.error(error instanceof Error ? error.message : 'Unable to save your profile. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -232,7 +227,6 @@ export default function StudentProfile() {
                         aria-current={isActive ? 'page' : undefined}
                         onClick={() => {
                           setActiveSection(section.id)
-                          setMessage('')
                         }}
                         className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition md:w-full ${
                           isActive
@@ -293,19 +287,6 @@ export default function StudentProfile() {
                 </div>
 
                 <div className="flex-1 px-5 py-6 sm:px-8 sm:py-8">
-                  {message && (
-                    <div
-                      role={saveError ? 'alert' : 'status'}
-                      className={`mb-6 rounded-xl border px-4 py-3 text-sm ${
-                        saveError
-                          ? 'border-red-200 bg-red-50 text-red-700'
-                          : 'border-primary-200 bg-primary-50 text-primary-800'
-                      }`}
-                    >
-                      {message}
-                    </div>
-                  )}
-
                   <motion.div
                     key={activeSection}
                     initial={{ opacity: 0, y: 6 }}
@@ -370,7 +351,6 @@ export default function StudentProfile() {
                                     ? otherInstitutionOption
                                     : event.target.value,
                               }))
-                              setMessage('')
                             }}
                             className={inputClassName}
                           >
