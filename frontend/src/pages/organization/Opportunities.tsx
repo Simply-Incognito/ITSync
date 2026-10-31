@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Plus, Briefcase, Clock, CheckCircle, XCircle, Edit, type LucideIcon } from 'lucide-react'
-import { opportunityApi } from '../../services/api'
+import { opportunityApi, organizationApi } from '../../services/api'
 import type { Opportunity, OpportunityInput, WorkArrangement } from '../../types/domain'
 import { getErrorMessage } from '../../utils/errors'
+import { getOpportunityImageChoices } from '../../utils/opportunity-images'
 
 interface OpportunityFormState {
   title: string
   description: string
   fieldOfStudy: string
+  imageKey: string
   requiredSkills: string
-  academicRequirements: string
   city: string
   state: string
   country: string
@@ -18,7 +19,6 @@ interface OpportunityFormState {
   durationWeeks: string
   availableSlots: string
   applicationDeadline: string
-  requiredDocuments: string
   additionalRequirements: string
 }
 
@@ -26,8 +26,8 @@ const emptyForm: OpportunityFormState = {
   title: '',
   description: '',
   fieldOfStudy: '',
+  imageKey: '',
   requiredSkills: '',
-  academicRequirements: '',
   city: '',
   state: '',
   country: 'Nigeria',
@@ -35,7 +35,6 @@ const emptyForm: OpportunityFormState = {
   durationWeeks: '',
   availableSlots: '',
   applicationDeadline: '',
-  requiredDocuments: '',
   additionalRequirements: '',
 }
 
@@ -48,10 +47,7 @@ export default function OrganizationOpportunities() {
   const [errorMessage, setErrorMessage] = useState('')
   const [formError, setFormError] = useState('')
   const [formData, setFormData] = useState<OpportunityFormState>(emptyForm)
-
-  const resetForm = () => {
-    setFormData(emptyForm)
-  }
+  const [organizationIndustry, setOrganizationIndustry] = useState('')
 
   useEffect(() => {
     fetchOpportunities()
@@ -59,8 +55,12 @@ export default function OrganizationOpportunities() {
 
   const fetchOpportunities = async () => {
     try {
-      const response = await opportunityApi.listMy()
+      const [response, organizationResponse] = await Promise.all([
+        opportunityApi.listMy(),
+        organizationApi.getProfile(),
+      ])
       setOpportunities(response.opportunities)
+      setOrganizationIndustry(organizationResponse.organization?.industry ?? '')
       setErrorMessage('')
     } catch (error) {
       console.error('Failed to fetch opportunities:', error)
@@ -83,7 +83,10 @@ export default function OrganizationOpportunities() {
 
   const openCreateForm = () => {
     setEditingId(null)
-    resetForm()
+    setFormData({
+      ...emptyForm,
+      imageKey: getOpportunityImageChoices(organizationIndustry)[0].id,
+    })
     setFormError('')
     setShowCreateForm(true)
   }
@@ -95,8 +98,9 @@ export default function OrganizationOpportunities() {
       title: opportunity.title,
       description: opportunity.description,
       fieldOfStudy: opportunity.fieldOfStudy,
+      imageKey:
+        opportunity.imageKey ?? getOpportunityImageChoices(organizationIndustry)[0].id,
       requiredSkills: (opportunity.requiredSkills || []).join(', '),
-      academicRequirements: opportunity.academicRequirements || '',
       city: opportunity.location.city,
       state: opportunity.location.state,
       country: opportunity.location.country,
@@ -104,7 +108,6 @@ export default function OrganizationOpportunities() {
       durationWeeks: String(opportunity.durationWeeks),
       availableSlots: String(opportunity.availableSlots),
       applicationDeadline: new Date(opportunity.applicationDeadline).toISOString().slice(0, 10),
-      requiredDocuments: (opportunity.requiredDocuments || []).join(', '),
       additionalRequirements: opportunity.additionalRequirements || '',
     })
     setShowCreateForm(true)
@@ -118,8 +121,8 @@ export default function OrganizationOpportunities() {
       title: formData.title.trim(),
       description: formData.description.trim(),
       fieldOfStudy: formData.fieldOfStudy.trim(),
+      imageKey: formData.imageKey,
       requiredSkills: formData.requiredSkills.split(',').map((value) => value.trim()).filter(Boolean),
-      academicRequirements: formData.academicRequirements.trim(),
       location: {
         city: formData.city.trim(),
         state: formData.state.trim(),
@@ -129,7 +132,6 @@ export default function OrganizationOpportunities() {
       durationWeeks: Number(formData.durationWeeks),
       availableSlots: Number(formData.availableSlots),
       applicationDeadline: new Date(`${formData.applicationDeadline}T23:59:59`).toISOString(),
-      requiredDocuments: formData.requiredDocuments.split(',').map((value) => value.trim()).filter(Boolean),
       additionalRequirements: formData.additionalRequirements.trim(),
     }
 
@@ -265,17 +267,6 @@ export default function OrganizationOpportunities() {
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Academic requirements</label>
-                    <textarea
-                      name="academicRequirements"
-                      maxLength={3000}
-                      value={formData.academicRequirements}
-                      onChange={handleChange}
-                      rows={2}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">Field of Study</label>
@@ -305,15 +296,40 @@ export default function OrganizationOpportunities() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Required documents</label>
-                    <input
-                      type="text"
-                      name="requiredDocuments"
-                      value={formData.requiredDocuments}
-                      onChange={handleChange}
-                      placeholder="Separate documents with commas"
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    />
+                    <div className="mb-2">
+                      <p className="text-sm font-medium text-slate-700">Opportunity image</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Choose a professionally designed image suggested for your {organizationIndustry || 'industry'}.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {getOpportunityImageChoices(organizationIndustry).map((choice) => (
+                        <button
+                          key={choice.id}
+                          type="button"
+                          aria-pressed={formData.imageKey === choice.id}
+                          onClick={() => setFormData((current) => ({ ...current, imageKey: choice.id }))}
+                          className={`overflow-hidden rounded-xl border-2 text-left transition ${
+                            formData.imageKey === choice.id
+                              ? 'border-primary-500 ring-2 ring-primary-100'
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <img src={choice.src} alt="" className="h-20 w-full object-cover" />
+                          <span className="block px-2.5 py-2 text-xs font-medium text-slate-700">
+                            {choice.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-primary-100 bg-primary-50 p-4">
+                    <p className="text-sm font-semibold text-slate-800">
+                      Required applicant verification
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Every applicant must upload either a student ID or biodata as a PDF, JPEG, or PNG file (maximum 1 MB).
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Additional requirements</label>

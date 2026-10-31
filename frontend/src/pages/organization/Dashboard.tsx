@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Building2, FileText, Users, Briefcase, Clock, CheckCircle, Plus, Eye } from 'lucide-react'
-import { organizationApi, opportunityApi, applicationApi } from '../../services/api'
+import { Building2, FileText, Users, Briefcase, Clock, CheckCircle, Plus, Eye, Download } from 'lucide-react'
+import { organizationApi, opportunityApi, applicationApi, studentDocumentApi } from '../../services/api'
 import type { Application, Opportunity, Organization } from '../../types/domain'
 import { getOpportunityTitle, getStudentName } from '../../utils/display'
 
@@ -12,6 +12,8 @@ export default function OrganizationDashboard() {
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [dataError, setDataError] = useState('')
+  const [documentError, setDocumentError] = useState('')
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -53,6 +55,31 @@ export default function OrganizationDashboard() {
     { label: 'Under Review', value: applications.filter((a) => a.status === 'under_review').length, icon: Clock, color: 'bg-amber-100', iconColor: 'text-amber-700' },
     { label: 'Accepted', value: applications.filter((a) => a.status === 'accepted').length, icon: CheckCircle, color: 'bg-primary-100', iconColor: 'text-primary-700' },
   ]
+
+  const downloadVerificationDocument = async (
+    applicationId: string,
+    documentId: string,
+    fileName: string,
+  ) => {
+    setDownloadingDocumentId(documentId)
+    setDocumentError('')
+    try {
+      const url = await studentDocumentApi.downloadForOrganization(applicationId, documentId)
+      const link = window.document.createElement('a')
+      link.href = url
+      link.download = fileName
+      link.rel = 'noreferrer'
+      window.document.body.append(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (error) {
+      console.error('Failed to download applicant verification document:', error)
+      setDocumentError(error instanceof Error ? error.message : 'Unable to download the document.')
+    } finally {
+      setDownloadingDocumentId('')
+    }
+  }
 
   if (loading) {
     return (
@@ -188,6 +215,11 @@ export default function OrganizationDashboard() {
           <div className="p-6 border-b border-slate-200">
             <h2 className="text-xl font-semibold text-slate-800">Recent Applications</h2>
           </div>
+          {documentError && (
+            <div role="alert" className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {documentError}
+            </div>
+          )}
           {applications.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="mx-auto text-slate-300 mb-4" size={48} />
@@ -210,6 +242,34 @@ export default function OrganizationDashboard() {
                       {app.status.replace('_', ' ')}
                     </span>
                   </div>
+                  {app.documents?.length ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {app.documents.map((document) => (
+                        <button
+                          key={document._id}
+                          type="button"
+                          disabled={downloadingDocumentId === document._id}
+                          onClick={() =>
+                            void downloadVerificationDocument(
+                              app._id,
+                              document._id,
+                              document.originalName,
+                            )
+                          }
+                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          <Download size={14} />
+                          {downloadingDocumentId === document._id
+                            ? 'Downloading…'
+                            : `${document.documentType === 'student_id' ? 'Student ID' : 'Biodata'} · ${document.originalName}`}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-slate-500">
+                      No verification document was attached to this application.
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
