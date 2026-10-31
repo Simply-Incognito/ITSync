@@ -5,6 +5,7 @@ import {
   type AdminApplication,
   type AdminApplicationStatus,
 } from "../../services/api";
+import { notify } from "../../lib/notify";
 
 const pageSize = 20;
 const statuses: AdminApplicationStatus[] = [
@@ -58,12 +59,9 @@ export default function AdminApplications() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   const loadApplications = useCallback(async () => {
     setLoading(true);
-    setError("");
     try {
       const response = await administrationApi.listApplications({
         page,
@@ -75,7 +73,7 @@ export default function AdminApplications() {
       setTotalPages(Math.max(1, response.pagination.totalPages));
       setSelectedStatuses({});
     } catch (requestError) {
-      setError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not load applications.",
@@ -99,7 +97,7 @@ export default function AdminApplications() {
       reason = window.prompt("Reason for rejecting this application:")?.trim();
       if (!reason) return;
       if (reason.length < 5) {
-        setError("A rejection reason must be at least 5 characters.");
+        notify.error("A rejection reason must be at least 5 characters.");
         return;
       }
     } else if (
@@ -111,20 +109,18 @@ export default function AdminApplications() {
     }
 
     setUpdatingId(application._id);
-    setError("");
-    setNotice("");
     try {
       await administrationApi.updateApplicationStatus(
         application._id,
         nextStatus,
         reason,
       );
-      setNotice(
+      notify.success(
         `Application status updated to ${nextStatus.replace(/_/g, " ")}.`,
       );
       await loadApplications();
     } catch (requestError) {
-      setError(
+      notify.error(
         requestError instanceof Error
           ? requestError.message
           : "Could not update application status.",
@@ -166,23 +162,6 @@ export default function AdminApplications() {
         </label>
         <p className="text-sm text-slate-500">{total.toLocaleString()} total</p>
       </div>
-
-      {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"
-        >
-          {error}
-        </div>
-      )}
-      {notice && (
-        <div
-          role="status"
-          className="rounded-xl border border-primary-200 bg-primary-50 p-4 text-sm text-primary-800"
-        >
-          {notice}
-        </div>
-      )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (

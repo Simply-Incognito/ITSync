@@ -15,6 +15,7 @@ import {
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { applicationApi, opportunityApi, studentDocumentApi } from '../../services/api'
+import { notify } from '../../lib/notify'
 import type {
   Application,
   Opportunity,
@@ -200,7 +201,6 @@ export default function StudentOpportunities() {
   const shouldReduceMotion = useReducedMotion()
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null)
   const [applyingId, setApplyingId] = useState('')
   const [appliedOpportunityIds, setAppliedOpportunityIds] = useState<Set<string>>(new Set())
@@ -209,8 +209,6 @@ export default function StudentOpportunities() {
   const [savedOpportunityIds, setSavedOpportunityIds] = useState(
     () => new Set(localStorage.getItem('itsync:saved-opportunities')?.split(',').filter(Boolean) ?? []),
   )
-  const [applicationMessage, setApplicationMessage] = useState('')
-  const [applicationError, setApplicationError] = useState(false)
   const [verificationFile, setVerificationFile] = useState<File | null>(null)
   const [verificationDocumentType, setVerificationDocumentType] =
     useState<StudentVerificationDocumentType>('student_id')
@@ -231,7 +229,6 @@ export default function StudentOpportunities() {
 
   const fetchOpportunities = async () => {
     setLoading(true)
-    setErrorMessage('')
     try {
       const params: Record<string, string> = {}
       if (search.trim()) params.search = search.trim()
@@ -276,8 +273,7 @@ export default function StudentOpportunities() {
       setOpportunities(allOpportunities)
       setCurrentPage(1)
     } catch (error) {
-      console.error('Failed to fetch opportunities:', error)
-      setErrorMessage(error instanceof Error ? error.message : 'Unable to load opportunities.')
+      notify.error(error instanceof Error ? error.message : 'Unable to load opportunities.')
     } finally {
       setLoading(false)
     }
@@ -360,23 +356,22 @@ export default function StudentOpportunities() {
   const toggleSaved = (opportunityId: string) => {
     setSavedOpportunityIds((current) => {
       const next = new Set(current)
-      if (next.has(opportunityId)) next.delete(opportunityId)
-      else next.add(opportunityId)
+      const isSaving = !next.has(opportunityId)
+      if (isSaving) next.add(opportunityId)
+      else next.delete(opportunityId)
       localStorage.setItem('itsync:saved-opportunities', [...next].join(','))
+      notify.success(isSaving ? 'Saved to your list.' : 'Removed from saved opportunities.')
       return next
     })
   }
 
   const applyForOpportunity = async (opportunityId: string) => {
     if (!verificationFile) {
-      setApplicationError(true)
-      setApplicationMessage('Upload your student ID or biodata to continue.')
+      notify.error('Upload your student ID or biodata to continue.')
       return
     }
 
     setApplyingId(opportunityId)
-    setApplicationMessage('')
-    setApplicationError(false)
     try {
       const { document } = await studentDocumentApi.upload(
         verificationFile,
@@ -396,11 +391,9 @@ export default function StudentOpportunities() {
         )
         setAppliedOpportunityCount((count) => count + 1)
       }
-      setApplicationMessage('Your application was submitted successfully. You can track it under My Applications.')
+      notify.success('Application submitted. Track it under My Applications.')
     } catch (error) {
-      console.error('Failed to apply for opportunity:', error)
-      setApplicationError(true)
-      setApplicationMessage(error instanceof Error ? error.message : 'Unable to submit your application.')
+      notify.error(error instanceof Error ? error.message : 'Unable to submit your application.')
     } finally {
       setApplyingId('')
     }
@@ -415,8 +408,6 @@ export default function StudentOpportunities() {
     setSelectedOpportunity(opportunity)
     setVerificationFile(null)
     setVerificationDocumentType('student_id')
-    setApplicationMessage('')
-    setApplicationError(false)
   }
 
   return (
@@ -442,10 +433,10 @@ export default function StudentOpportunities() {
 
           <form
             onSubmit={handleSearch}
-            className="opportunity-search-panel relative mb-5 rounded-2xl border border-slate-200 bg-white p-px shadow-sm"
+            className="relative rounded-xl border border-slate-200 bg-white"
           >
-            <div className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center">
-              <div className="-mx-1 flex min-w-0 items-center overflow-x-auto px-1 sm:mx-0 sm:shrink-0">
+            <div className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center px-1">
+              <div className="-mx-1 flex min-w-0 items-center overflow-x-auto sm:mx-0 sm:shrink-0">
                 <div className="flex shrink-0 items-center gap-1.5 rounded-xl bg-slate-50 p-0.5">
                   {tabs.map((tab) => (
                     <button
@@ -453,7 +444,7 @@ export default function StudentOpportunities() {
                       type="button"
                       aria-pressed={activeTab === tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium transition sm:px-3 sm:py-2 ${
+                      className={`whitespace-nowrap rounded-lg px-1 py-0.5 text-xs font-medium transition sm:px-2 sm:py-1 ${
                         activeTab === tab.id
                           ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200'
                           : 'text-slate-600 hover:text-slate-900'
@@ -461,7 +452,7 @@ export default function StudentOpportunities() {
                     >
                       {tab.label}
                       {tab.id !== 'all' && (
-                        <span className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary-100 px-1.5 py-0.5 text-xs font-semibold leading-none text-primary-700">
+                        <span className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full bg-primary-100 px-1 py-0.5 text-xs font-semibold leading-none text-primary-700">
                           {tab.id === 'for-you'
                             ? recommendedOpportunities.length
                             : tab.id === 'saved'
@@ -482,7 +473,7 @@ export default function StudentOpportunities() {
                   onChange={(event) => setSearch(event.target.value)}
                   aria-label="Search opportunities"
                   placeholder="Search by title, location, or field..."
-                  className="min-w-0 flex-1 border-0 bg-transparent px-1.5 py-1.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:ring-0 sm:px-2"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-1 py-1 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:ring-0 sm:px-2"
                 />
                 <button
                   type="button"
@@ -576,12 +567,6 @@ export default function StudentOpportunities() {
             )}
           </form>
 
-          {errorMessage && (
-            <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {errorMessage}
-            </div>
-          )}
-
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-slate-800">
@@ -615,7 +600,7 @@ export default function StudentOpportunities() {
                 <div key={item} className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white" />
               ))}
             </div>
-          ) : errorMessage ? null : visibleOpportunities.length === 0 ? (
+          ) : visibleOpportunities.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
                 {activeTab === 'saved' ? <Bookmark size={24} /> : <Briefcase size={24} />}
@@ -873,19 +858,6 @@ export default function StudentOpportunities() {
                   </button>
                 </div>
 
-                {applicationMessage && (
-                  <div
-                    role={applicationError ? 'alert' : 'status'}
-                    className={`mt-5 rounded-xl border p-4 text-sm ${
-                      applicationError
-                        ? 'border-red-200 bg-red-50 text-red-700'
-                        : 'border-primary-200 bg-primary-50 text-primary-800'
-                    }`}
-                  >
-                    {applicationMessage}
-                  </div>
-                )}
-
                 <div className="mt-6 space-y-5 text-sm leading-6 text-slate-700">
                   <p className="whitespace-pre-line">{selectedOpportunity.description}</p>
                   <div className="grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-2">
@@ -946,11 +918,8 @@ export default function StudentOpportunities() {
                             onChange={(event) => {
                               const file = event.target.files?.[0] ?? null
                               setVerificationFile(null)
-                              setApplicationMessage('')
-                              setApplicationError(false)
                               if (file && file.size > 1024 * 1024) {
-                                setApplicationError(true)
-                                setApplicationMessage('The verification document must not exceed 1 MB.')
+                                notify.error('The verification document must not exceed 1 MB.')
                                 event.target.value = ''
                                 return
                               }

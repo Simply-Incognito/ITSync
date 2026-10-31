@@ -8,11 +8,11 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  administrationApi,
+import { administrationApi,
   type AdminOrganization,
   type AdminStats,
 } from "../../services/api";
+import { notify } from "../../lib/notify";
 
 const emptyStats: AdminStats = {
   totalStudents: 0,
@@ -83,7 +83,6 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats>(emptyStats);
   const [organizations, setOrganizations] = useState<AdminOrganization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -96,9 +95,9 @@ export default function AdminDashboard() {
         setStats(statsResponse.stats);
         setOrganizations(organizationResponse.organizations);
       })
-      .catch((requestError: unknown) => {
+      .catch((requestError) => {
         if (active)
-          setError(
+          notify.error(
             requestError instanceof Error
               ? requestError.message
               : "Could not load dashboard data.",
@@ -128,15 +127,6 @@ export default function AdminDashboard() {
           Monitor activity and review platform organizations.
         </p>
       </div>
-
-      {error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"
-        >
-          {error}
-        </div>
-      )}
 
       <section
         aria-label="Platform statistics"

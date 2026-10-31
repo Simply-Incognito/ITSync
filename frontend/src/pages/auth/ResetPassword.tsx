@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Lock, ShieldAlert } from 'lucide-react'
 import { authApi } from '../../services/api'
 import { getErrorMessage } from '../../utils/errors'
+import { notify } from '../../lib/notify'
 
 const minimumPasswordLength = 12
 
@@ -16,19 +17,17 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
 
     if (password.length < minimumPasswordLength) {
-      setError(`Use at least ${minimumPasswordLength} characters.`)
+      notify.error(`Use at least ${minimumPasswordLength} characters.`)
       return
     }
 
     if (password !== confirmPassword) {
-      setError('The two passwords do not match.')
+      notify.error('The two passwords do not match.')
       return
     }
 
@@ -37,8 +36,9 @@ export default function ResetPassword() {
     try {
       await authApi.resetPassword(token, password, confirmPassword)
       setIsComplete(true)
+      notify.success('Password updated. You can sign in now.')
     } catch (err) {
-      setError(getErrorMessage(err, 'This reset link is no longer valid. Request a new one.'))
+      notify.error(getErrorMessage(err, 'This reset link is no longer valid. Request a new one.'))
     } finally {
       setIsLoading(false)
     }
@@ -105,12 +105,6 @@ export default function ResetPassword() {
             </div>
           ) : (
             <>
-              {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-                  {error}
-                </div>
-              )}
-
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-ink mb-2">

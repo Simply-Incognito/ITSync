@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { organizationApi } from '../../services/api'
+import { notify } from '../../lib/notify'
 
 interface RequiredDocument {
   type: OrganizationDocumentType
@@ -44,8 +45,6 @@ export default function OrganizationVerification() {
   const [documents, setDocuments] = useState<VerificationDocument[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [message, setMessage] = useState('')
-  const [messageType, setMessageType] = useState<'success' | 'error'>('success')
   const [loadError, setLoadError] = useState('')
   const [uploadingType, setUploadingType] = useState<OrganizationDocumentType | null>(null)
   const cacCertificateRef = useRef<HTMLInputElement>(null)
@@ -83,16 +82,13 @@ export default function OrganizationVerification() {
     if (!file) return
 
     setUploadingType(docType)
-    setMessage('')
 
     try {
       await organizationApi.uploadDocument(file, docType)
-      setMessage('Document uploaded successfully!')
-      setMessageType('success')
+      notify.success('Document uploaded successfully.')
       await fetchVerificationStatus()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to upload document.')
-      setMessageType('error')
+      notify.error(error instanceof Error ? error.message : 'Failed to upload document.')
     } finally {
       setUploadingType(null)
       const ref = fileInputRefs[docType as RequiredDocument['type']]
@@ -104,16 +100,13 @@ export default function OrganizationVerification() {
 
   const handleSubmit = async () => {
     setSubmitting(true)
-    setMessage('')
 
     try {
       await organizationApi.submitForVerification()
-      setMessage('Organization submitted for verification successfully!')
-      setMessageType('success')
+      notify.success('Organization submitted for verification.')
       await fetchVerificationStatus()
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to submit for verification.')
-      setMessageType('error')
+      notify.error(error instanceof Error ? error.message : 'Failed to submit for verification.')
     } finally {
       setSubmitting(false)
     }
@@ -236,19 +229,6 @@ export default function OrganizationVerification() {
               ? 'Your organization is verified and can post opportunities.'
               : 'Complete verification to start posting opportunities'}
           </p>
-
-          {message && (
-            <div
-              role={messageType === 'error' ? 'alert' : 'status'}
-              className={`mb-6 rounded-xl border p-4 ${
-                messageType === 'success'
-                  ? 'border-green-200 bg-green-50 text-green-700'
-                  : 'border-red-200 bg-red-50 text-red-700'
-              }`}
-            >
-              {message}
-            </div>
-          )}
 
           {/* Status Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">

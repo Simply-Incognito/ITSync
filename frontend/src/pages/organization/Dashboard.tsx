@@ -5,14 +5,13 @@ import { Building2, FileText, Users, Briefcase, Clock, CheckCircle, Plus, Eye, D
 import { organizationApi, opportunityApi, applicationApi, studentDocumentApi } from '../../services/api'
 import type { Application, Opportunity, Organization } from '../../types/domain'
 import { getOpportunityTitle, getStudentName } from '../../utils/display'
+import { notify } from '../../lib/notify'
 
 export default function OrganizationDashboard() {
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
-  const [dataError, setDataError] = useState('')
-  const [documentError, setDocumentError] = useState('')
   const [downloadingDocumentId, setDownloadingDocumentId] = useState('')
 
   useEffect(() => {
@@ -42,8 +41,7 @@ export default function OrganizationDashboard() {
         throw applicationsResult.reason
       }
     } catch (error) {
-      console.error('Failed to fetch data:', error)
-      setDataError(error instanceof Error ? error.message : 'Unable to load organization data.')
+      notify.error(error instanceof Error ? error.message : 'Unable to load organization data.')
     } finally {
       setLoading(false)
     }
@@ -62,7 +60,6 @@ export default function OrganizationDashboard() {
     fileName: string,
   ) => {
     setDownloadingDocumentId(documentId)
-    setDocumentError('')
     try {
       const url = await studentDocumentApi.downloadForOrganization(applicationId, documentId)
       const link = window.document.createElement('a')
@@ -74,8 +71,7 @@ export default function OrganizationDashboard() {
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     } catch (error) {
-      console.error('Failed to download applicant verification document:', error)
-      setDocumentError(error instanceof Error ? error.message : 'Unable to download the document.')
+      notify.error(error instanceof Error ? error.message : 'Unable to download the document.')
     } finally {
       setDownloadingDocumentId('')
     }
@@ -116,12 +112,6 @@ export default function OrganizationDashboard() {
             )}
           </div>
         </motion.div>
-
-        {dataError && (
-          <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {dataError}
-          </div>
-        )}
 
         {/* Verification Status */}
         {organization && organization.verificationStatus !== 'verified' && (
@@ -215,11 +205,6 @@ export default function OrganizationDashboard() {
           <div className="p-6 border-b border-slate-200">
             <h2 className="text-xl font-semibold text-slate-800">Recent Applications</h2>
           </div>
-          {documentError && (
-            <div role="alert" className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {documentError}
-            </div>
-          )}
           {applications.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="mx-auto text-slate-300 mb-4" size={48} />

@@ -584,3 +584,55 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Toast notifications (react-hot-toast)
+   Centered under the sticky navbar, with green success and red error states.
+--------------------------------------------------------------------------- */
+.app-toast {
+  max-width: min(24rem, calc(100vw - 2rem));
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  padding: 0.875rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  box-shadow: 0 14px 34px rgba(25, 23, 20, 0.14);
+}
+
+.app-toast--success {
+  border-color: var(--color-primary-200);
+  background: var(--color-primary-50);
+  color: var(--color-primary-900);
+}
+
+.app-toast--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.app-toast--loading {
+  border-color: var(--color-line);
+}
+
+html[data-theme="dark"] .app-toast {
+  border-color: #35322d;
+  background: #1f1d1a;
+  color: #f5f3ef;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="dark"] .app-toast--success {
+  border-color: rgba(75, 210, 138, 0.35);
+  background: rgba(35, 134, 83, 0.22);
+  color: #b6f2ce;
+}
+
+html[data-theme="dark"] .app-toast--error {
+  border-color: rgba(248, 113, 113, 0.38);
+  background: rgba(185, 28, 28, 0.24);
+  color: #fecaca;
+}

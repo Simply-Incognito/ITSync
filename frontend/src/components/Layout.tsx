@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import FeedbackWidget from './FeedbackWidget'
+import AppToaster from './AppToaster'
 
 export default function Layout() {
   const { isLoading } = useAuth()
@@ -23,6 +24,7 @@ export default function Layout() {
       </main>
       <Footer />
       <FeedbackWidget />
+      <AppToaster />
     </div>
   )
 }
