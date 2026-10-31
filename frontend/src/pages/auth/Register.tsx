@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, Building2, GraduationCap, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import TagInput from '../../components/TagInput'
+import { industryOptions, otherIndustryOption } from '../../constants/industries'
 
 export default function Register() {
   const [role, setRole] = useState<'student' | 'organization_representative'>('student')
@@ -18,11 +20,12 @@ export default function Register() {
     currentLevel: '',
     expectedDurationWeeks: '',
     preferredLocations: '',
-    skills: '',
+    skills: [] as string[],
     legalName: '',
     tradingName: '',
     registrationNumber: '',
     industry: '',
+    customIndustry: '',
     description: '',
     website: '',
     representativeName: '',
@@ -49,6 +52,14 @@ export default function Register() {
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
+      return
+    }
+    if (
+      role === 'organization_representative' &&
+      formData.industry === otherIndustryOption &&
+      !formData.customIndustry.trim()
+    ) {
+      setError('Enter your organization’s industry.')
       return
     }
 
@@ -78,9 +89,7 @@ export default function Register() {
             preferredLocations: formData.preferredLocations
               ? formData.preferredLocations.split(',').map((value) => value.trim())
               : undefined,
-            skills: formData.skills
-              ? formData.skills.split(',').map((value) => value.trim())
-              : undefined,
+            skills: formData.skills.length > 0 ? formData.skills : undefined,
           },
         })
       } else {
@@ -91,7 +100,10 @@ export default function Register() {
             legalName: formData.legalName,
             tradingName: formData.tradingName || undefined,
             registrationNumber: formData.registrationNumber,
-            industry: formData.industry,
+            industry:
+              formData.industry === otherIndustryOption
+                ? formData.customIndustry.trim()
+                : formData.industry,
             description: formData.description,
             website: formData.website || undefined,
             representativeName: formData.representativeName,
@@ -311,17 +323,12 @@ export default function Register() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-2">Skills (comma-separated)</label>
-                  <input
-                    type="text"
-                    name="skills"
-                    value={formData.skills}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 border border-line rounded-xl bg-surface focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none"
-                    placeholder="JavaScript, React, Node.js"
-                  />
-                </div>
+                <TagInput
+                  label="Skills"
+                  values={formData.skills}
+                  onChange={(skills) => setFormData((current) => ({ ...current, skills }))}
+                  placeholder="Type a skill and press Enter…"
+                />
               </div>
             )}
 
@@ -375,19 +382,36 @@ export default function Register() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink mb-2">Industry</label>
-                    <input
-                      type="text"
+                    <select
                       name="industry"
                       value={formData.industry}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-line rounded-xl bg-surface focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none"
-                      placeholder="Technology"
+                      required
+                    >
+                      <option value="">Select your industry</option>
+                      {industryOptions.map((industry) => (
+                        <option key={industry} value={industry}>{industry}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {formData.industry === otherIndustryOption && (
+                  <div>
+                    <label className="block text-sm font-medium text-ink mb-2">Industry name</label>
+                    <input
+                      type="text"
+                      name="customIndustry"
+                      value={formData.customIndustry}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-line rounded-xl bg-surface focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none"
+                      placeholder="Enter your organization’s industry"
                       required
                       minLength={2}
                       maxLength={120}
                     />
                   </div>
-                </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-ink mb-2">Description</label>
                   <textarea
