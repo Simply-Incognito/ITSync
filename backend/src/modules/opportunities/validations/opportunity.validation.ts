@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { opportunityImageKeys } from '../models/opportunity.model.js';
 
 const futureDate = z.coerce.date().refine((date) => date.getTime() > Date.now(), {
   message: 'Application deadline must be in the future.',
@@ -8,6 +9,7 @@ const opportunityFields = {
   title: z.string().trim().min(3).max(160),
   description: z.string().trim().min(20).max(10000),
   fieldOfStudy: z.string().trim().min(2).max(160),
+  imageKey: z.enum(opportunityImageKeys).optional(),
   requiredSkills: z.array(z.string().trim().min(1).max(100)).max(30).default([]),
   academicRequirements: z.string().trim().max(3000).default(''),
   location: z

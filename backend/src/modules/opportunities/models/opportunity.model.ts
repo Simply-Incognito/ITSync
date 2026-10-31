@@ -9,6 +9,17 @@ export const opportunityStatuses = [
   'suspended',
 ] as const;
 
+export const opportunityImageKeys = [
+  'technology-network',
+  'technology-code',
+  'finance-growth',
+  'healthcare-care',
+  'engineering-design',
+  'energy-future',
+  'agriculture-fields',
+  'business-collaboration',
+] as const;
+
 export type OpportunityStatus = (typeof opportunityStatuses)[number];
 
 const opportunitySchema = new Schema(
@@ -23,6 +34,7 @@ const opportunitySchema = new Schema(
     title: { type: String, required: true, trim: true, maxlength: 160 },
     description: { type: String, required: true, trim: true, maxlength: 10000 },
     fieldOfStudy: { type: String, required: true, trim: true, maxlength: 160 },
+    imageKey: { type: String, enum: opportunityImageKeys, default: 'business-collaboration' },
     requiredSkills: [{ type: String, trim: true, maxlength: 100 }],
     academicRequirements: { type: String, trim: true, maxlength: 3000, default: '' },
     location: {

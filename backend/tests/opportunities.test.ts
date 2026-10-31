@@ -50,6 +50,7 @@ const validOpportunity = {
   title: 'Software Engineering SIWES Placement',
   description: 'Work with the product engineering team on supervised software projects.',
   fieldOfStudy: 'Computer Science',
+  imageKey: 'technology-network',
   location: { city: 'Lagos', state: 'Lagos', country: 'Nigeria' },
   workArrangement: 'hybrid',
   durationWeeks: 24,
@@ -153,6 +154,10 @@ describe('opportunity validation', () => {
     ).toBe(false);
     expect(
       opportunityCreateSchema.safeParse({ ...validOpportunity, status: 'published' }).success,
+    ).toBe(false);
+    expect(
+      opportunityCreateSchema.safeParse({ ...validOpportunity, imageKey: 'external-image-url' })
+        .success,
     ).toBe(false);
   });
 });
