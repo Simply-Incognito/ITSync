@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, Building2, GraduationCap, ArrowRight } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { notify } from '../../lib/notify'
 import TagInput from '../../components/TagInput'
 import { industryOptions, otherIndustryOption } from '../../constants/industries'
 
@@ -37,7 +38,6 @@ export default function Register() {
     postalCode: '',
   })
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { register } = useAuth()
   const navigate = useNavigate()
@@ -48,10 +48,9 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
+      notify.error('Passwords do not match.')
       return
     }
     if (
@@ -59,7 +58,7 @@ export default function Register() {
       formData.industry === otherIndustryOption &&
       !formData.customIndustry.trim()
     ) {
-      setError('Enter your organization’s industry.')
+      notify.error('Enter your organization’s industry.')
       return
     }
 
@@ -119,9 +118,10 @@ export default function Register() {
         })
       }
 
+      notify.success('Account created. Welcome to ITSync!')
       navigate(role === 'student' ? '/student/dashboard' : '/organization/verification')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.')
+      notify.error(err instanceof Error ? err.message : 'Registration failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -141,12 +141,6 @@ export default function Register() {
         </div>
 
         <div className="bg-surface rounded-2xl border border-line p-8">
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-
           {/* Role Selection */}
           <div className="mb-8">
             <label className="block text-sm font-medium text-ink mb-3">Register as...</label>

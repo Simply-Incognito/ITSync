@@ -5,26 +5,26 @@ import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { getDashboardPath } from '../../utils/navigation'
 import { getErrorMessage } from '../../utils/errors'
+import { notify } from '../../lib/notify'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
     setIsLoading(true)
 
     try {
       const user = await login(email, password)
+      notify.success('Signed in successfully.')
       navigate(getDashboardPath(user.role), { replace: true })
     } catch (err) {
-      setError(getErrorMessage(err, 'Login failed. Please check your credentials.'))
+      notify.error(getErrorMessage(err, 'Login failed. Please check your credentials.'))
     } finally {
       setIsLoading(false)
     }
@@ -44,12 +44,6 @@ export default function Login() {
         </div>
 
         <div className="bg-surface rounded-2xl border border-line p-8">
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-ink mb-2">
