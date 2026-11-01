@@ -207,6 +207,15 @@ export interface ApplicationInput {
 
 export type StudentVerificationDocumentType = 'student_id' | 'biodata'
 
+export interface StudentVerificationDocument {
+  documentId: string
+  documentType: StudentVerificationDocumentType
+  originalName: string
+  contentType: string
+  byteSize: number
+  createdAt: string
+}
+
 export interface StudentDocumentSummary {
   _id: string
   documentType: StudentVerificationDocumentType

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, LogOut, Menu, Moon, Sparkles, Sun, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getDashboardPath } from '../utils/navigation'
+import { useStudentNavigation } from './student/StudentNavigationContext'
 
 function getInitialTheme() {
   try {
@@ -18,8 +19,11 @@ export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(getInitialTheme)
+  const { mobileMenuOpen: studentMenuOpen, setMobileMenuOpen: setStudentMenuOpen } = useStudentNavigation()
+  const { pathname } = useLocation()
   const navigate = useNavigate()
   const dashboardLink = user ? getDashboardPath(user.role) : '/login'
+  const isStudentWorkspace = pathname.startsWith('/student/')
 
   useEffect(() => {
     document.documentElement.dataset.theme = isDarkMode ? 'dark' : 'light'
@@ -50,7 +54,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-surface/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:h-[4.5rem] sm:px-6 lg:px-8">
+      <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:h-[4.5rem] sm:px-6 lg:px-8">
         <Link
           to={isAuthenticated ? dashboardLink : '/'}
           onClick={closeMobileMenu}
@@ -62,14 +66,6 @@ export default function Navbar() {
           </span>
           <span className="text-base font-bold tracking-tight text-ink sm:text-lg">ITSync</span>
         </Link>
-
-        {isAuthenticated && (
-          <nav aria-label="Primary navigation" className="hidden items-center gap-4 lg:flex xl:gap-6">
-            <Link to={dashboardLink} className="rounded-lg px-2 py-2 text-sm font-medium text-ink-muted transition hover:text-primary-700">
-              Dashboard
-            </Link>
-          </nav>
-        )}
 
         <div className="flex shrink-0 items-center gap-2">
           <div className="hidden items-center gap-3 lg:flex">
@@ -106,30 +102,33 @@ export default function Navbar() {
 
           <button
             type="button"
-            onClick={() => setMobileOpen((current) => !current)}
+            onClick={() => {
+              if (isStudentWorkspace) {
+                setStudentMenuOpen(!studentMenuOpen)
+              } else {
+                setMobileOpen((current) => !current)
+              }
+            }}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-ink-muted transition hover:border-primary-500/50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 lg:hidden"
-            aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-navigation"
+            aria-label={(isStudentWorkspace ? studentMenuOpen : mobileOpen) ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={isStudentWorkspace ? studentMenuOpen : mobileOpen}
+            aria-controls={isStudentWorkspace ? 'student-mobile-navigation' : 'mobile-navigation'}
           >
-            {mobileOpen ? <X className="h-[18px] w-[18px]" aria-hidden="true" /> : <Menu className="h-[18px] w-[18px]" aria-hidden="true" />}
+            {(isStudentWorkspace ? studentMenuOpen : mobileOpen)
+              ? <X className="h-[18px] w-[18px]" aria-hidden="true" />
+              : <Menu className="h-[18px] w-[18px]" aria-hidden="true" />}
           </button>
         </div>
       </div>
 
-      {mobileOpen && (
+      {mobileOpen && !isStudentWorkspace && (
         <nav id="mobile-navigation" aria-label="Mobile navigation" className="border-t border-line bg-surface px-4 py-3 lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-1">
             {isAuthenticated ? (
-              <>
-                <Link to={dashboardLink} onClick={closeMobileMenu} className="flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-muted hover:bg-surface-soft hover:text-primary-700">
-                  Dashboard
-                </Link>
-                <button type="button" onClick={handleLogout} className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-sm font-medium text-ink-muted hover:bg-surface-soft hover:text-primary-700">
-                  <LogOut className="h-4 w-4" aria-hidden="true" />
-                  Sign out
-                </button>
-              </>
+              <button type="button" onClick={handleLogout} className="flex min-h-11 items-center gap-2 rounded-xl px-3 text-left text-sm font-medium text-ink-muted hover:bg-surface-soft hover:text-primary-700">
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                Sign out
+              </button>
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <Link to="/login" onClick={closeMobileMenu} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line px-3 text-sm font-semibold text-ink transition hover:bg-surface-soft">

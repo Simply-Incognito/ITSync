@@ -5,6 +5,7 @@ import { useAuth } from './context/AuthContext'
 import type { UserRole } from './types/domain'
 const Layout = lazy(() => import('./components/Layout'))
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
+const StudentLayout = lazy(() => import('./components/student/StudentLayout'))
 const Home = lazy(() => import('./pages/Home'))
 const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
@@ -56,10 +57,12 @@ export default function App() {
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
             <Route path="student" element={<RoleRoute allowedRole="student" />}>
-              <Route path="dashboard" element={<StudentDashboard />} />
-              <Route path="profile" element={<StudentProfile />} />
-              <Route path="opportunities" element={<StudentOpportunities />} />
-              <Route path="applications" element={<StudentApplications />} />
+              <Route element={<StudentLayout />}>
+                <Route path="dashboard" element={<StudentDashboard />} />
+                <Route path="profile" element={<StudentProfile />} />
+                <Route path="opportunities" element={<StudentOpportunities />} />
+                <Route path="applications" element={<StudentApplications />} />
+              </Route>
             </Route>
             <Route path="organization" element={<RoleRoute allowedRole="organization_representative" />}>
               <Route path="dashboard" element={<OrganizationDashboard />} />

@@ -20,6 +20,7 @@ import type {
   Application,
   Opportunity,
   StudentProfile,
+  StudentVerificationDocument,
   StudentVerificationDocumentType,
 } from '../../types/domain'
 import { getOrganizationName } from '../../utils/display'
@@ -210,6 +211,8 @@ export default function StudentOpportunities() {
     () => new Set(localStorage.getItem('itsync:saved-opportunities')?.split(',').filter(Boolean) ?? []),
   )
   const [verificationFile, setVerificationFile] = useState<File | null>(null)
+  const [verificationDocuments, setVerificationDocuments] = useState<StudentVerificationDocument[]>([])
+  const [selectedVerificationDocumentId, setSelectedVerificationDocumentId] = useState('')
   const [verificationDocumentType, setVerificationDocumentType] =
     useState<StudentVerificationDocumentType>('student_id')
   const [search, setSearch] = useState('')
@@ -225,6 +228,7 @@ export default function StudentOpportunities() {
   useEffect(() => {
     void fetchOpportunities()
     void fetchMyApplications()
+    void fetchMyVerificationDocuments()
   }, [])
 
   const fetchOpportunities = async () => {
@@ -324,6 +328,16 @@ export default function StudentOpportunities() {
     }
   }
 
+  const fetchMyVerificationDocuments = async () => {
+    try {
+      const { documents } = await studentDocumentApi.listMy()
+      setVerificationDocuments(documents)
+      setSelectedVerificationDocumentId((current) => current || documents[0]?.documentId || '')
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : 'Unable to load your verification documents.')
+    }
+  }
+
   const recommendedOpportunities = useMemo(
     () => getRecommendedOpportunities(opportunities, studentProfile),
     [opportunities, studentProfile],
@@ -354,32 +368,45 @@ export default function StudentOpportunities() {
   }, [activeTab])
 
   const toggleSaved = (opportunityId: string) => {
-    setSavedOpportunityIds((current) => {
-      const next = new Set(current)
-      const isSaving = !next.has(opportunityId)
-      if (isSaving) next.add(opportunityId)
-      else next.delete(opportunityId)
-      localStorage.setItem('itsync:saved-opportunities', [...next].join(','))
-      notify.success(isSaving ? 'Saved to your list.' : 'Removed from saved opportunities.')
-      return next
-    })
+    const next = new Set(savedOpportunityIds)
+    const isSaving = !next.has(opportunityId)
+    if (isSaving) next.add(opportunityId)
+    else next.delete(opportunityId)
+
+    setSavedOpportunityIds(next)
+    localStorage.setItem('itsync:saved-opportunities', [...next].join(','))
+    notify.success(isSaving ? 'Saved to your list.' : 'Removed from saved opportunities.')
   }
 
   const applyForOpportunity = async (opportunityId: string) => {
-    if (!verificationFile) {
-      notify.error('Upload your student ID or biodata to continue.')
+    if (!verificationFile && !selectedVerificationDocumentId) {
+      notify.error('Choose an existing student ID or biodata, or upload one to continue.')
       return
     }
 
     setApplyingId(opportunityId)
     try {
-      const { document } = await studentDocumentApi.upload(
-        verificationFile,
-        verificationDocumentType,
-      )
+      let documentId = selectedVerificationDocumentId
+      if (verificationFile) {
+        const { document } = await studentDocumentApi.upload(verificationFile, verificationDocumentType)
+        documentId = document.documentId
+        setVerificationDocuments((current) => [
+          {
+            documentId: document.documentId,
+            documentType: document.documentType,
+            originalName: document.originalName,
+            contentType: document.contentType,
+            byteSize: document.byteSize,
+            createdAt: new Date().toISOString(),
+          },
+          ...current,
+        ])
+        setSelectedVerificationDocumentId(documentId)
+        setVerificationFile(null)
+      }
       await applicationApi.create({
         opportunityId,
-        studentDocumentIds: [document.documentId],
+        studentDocumentIds: [documentId],
       })
       setAppliedOpportunityIds((current) => new Set(current).add(opportunityId))
       const appliedOpportunity = opportunities.find((opportunity) => opportunity._id === opportunityId)
@@ -408,6 +435,7 @@ export default function StudentOpportunities() {
     setSelectedOpportunity(opportunity)
     setVerificationFile(null)
     setVerificationDocumentType('student_id')
+    setSelectedVerificationDocumentId(verificationDocuments[0]?.documentId || '')
   }
 
   return (
@@ -891,11 +919,31 @@ export default function StudentOpportunities() {
                     <div className="mt-6 rounded-xl border border-primary-100 bg-primary-50/60 p-4">
                       <p className="font-semibold text-slate-800">Verification document</p>
                       <p className="mt-1 text-sm text-slate-600">
-                        Upload either your student ID or biodata. PDF, JPEG, or PNG files up to 1 MB are accepted.
+                        Use a document saved to your profile, or upload a different one for this application. PDF, JPEG, or PNG files up to 1 MB are accepted.
                       </p>
+                      {verificationDocuments.length > 0 && (
+                        <label className="mt-3 block text-sm font-medium text-slate-700">
+                          Saved documents
+                          <select
+                            value={verificationFile ? '' : selectedVerificationDocumentId}
+                            onChange={(event) => {
+                              setSelectedVerificationDocumentId(event.target.value)
+                              setVerificationFile(null)
+                            }}
+                            className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                          >
+                            <option value="">Choose a saved document</option>
+                            {verificationDocuments.map((document) => (
+                              <option key={document.documentId} value={document.documentId}>
+                                {document.documentType === 'student_id' ? 'Student ID' : 'Biodata'} — {document.originalName}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
                       <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,180px)_1fr]">
                         <label className="block text-sm font-medium text-slate-700">
-                          Document type
+                          {verificationDocuments.length ? 'Replacement type' : 'Document type'}
                           <select
                             value={verificationDocumentType}
                             onChange={(event) =>
@@ -910,35 +958,33 @@ export default function StudentOpportunities() {
                           </select>
                         </label>
                         <label className="block text-sm font-medium text-slate-700">
-                          Choose file
+                          {verificationDocuments.length ? 'Or upload a different document' : 'Choose file'}
                           <input
+                            key={verificationFile?.name || 'empty-verification-file'}
                             type="file"
-                            required
                             accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
                             onChange={(event) => {
                               const file = event.target.files?.[0] ?? null
-                              setVerificationFile(null)
-                              if (file && file.size > 1024 * 1024) {
-                                notify.error('The verification document must not exceed 1 MB.')
+                              if (file && (file.size === 0 || file.size > 1024 * 1024)) {
+                                notify.error('The verification document must be no larger than 1 MB.')
                                 event.target.value = ''
+                                setVerificationFile(null)
                                 return
                               }
                               setVerificationFile(file)
+                              if (file) setSelectedVerificationDocumentId('')
                             }}
                             className="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-primary-50 file:px-3 file:py-1.5 file:font-medium file:text-primary-700"
                           />
                         </label>
                       </div>
-                      {verificationFile && (
-                        <p className="mt-2 text-xs text-slate-500">
-                          Selected: {verificationFile.name} ({(verificationFile.size / 1024).toFixed(0)} KB)
-                        </p>
-                      )}
-                      {!verificationFile && (
-                        <p className="mt-2 text-xs font-medium text-primary-800">
-                          This document is required before you can apply.
-                        </p>
-                      )}
+                      <p className="mt-2 text-xs text-slate-500">
+                        {verificationFile
+                          ? `This file will be used for this application: ${verificationFile.name}`
+                          : selectedVerificationDocumentId
+                            ? 'Your selected saved document will be attached to this application.'
+                            : 'Select a saved document or upload one to continue.'}
+                      </p>
                     </div>
                   )}
 
@@ -956,7 +1002,7 @@ export default function StudentOpportunities() {
                       applyingId === selectedOpportunity._id ||
                       appliedOpportunityIds.has(selectedOpportunity._id) ||
                       isOpportunityUnavailable(selectedOpportunity) ||
-                      !verificationFile
+                      (!verificationFile && !selectedVerificationDocumentId)
                     }
                     onClick={() => void applyForOpportunity(selectedOpportunity._id)}
                     className="rounded-xl bg-primary-600 px-5 py-3 font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"

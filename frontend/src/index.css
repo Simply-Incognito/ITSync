@@ -340,6 +340,17 @@ button,
   }
 }
 
+@media (max-width: 767px) and (orientation: landscape) and (max-height: 500px) {
+  .student-profile .profile-section-float {
+    bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    padding-block: 0.25rem;
+  }
+
+  .student-profile .profile-section-float button {
+    height: 2.5rem;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
 }
@@ -399,6 +410,10 @@ html[data-theme="dark"] body {
   background-size: 24px 24px, auto, auto, auto;
   background-attachment: fixed;
   color: var(--text);
+}
+
+html[data-theme="dark"] .student-layout {
+  background-color: #111a14;
 }
 
 html[data-theme="dark"] .bg-white,
@@ -550,7 +565,9 @@ html[data-theme="dark"] .bg-rose-100 {
 html[data-theme="dark"] .text-red-800,
 html[data-theme="dark"] .text-red-700,
 html[data-theme="dark"] .text-red-600,
-html[data-theme="dark"] .text-rose-800 {
+html[data-theme="dark"] .text-rose-800,
+html[data-theme="dark"] .text-rose-700,
+html[data-theme="dark"] .text-rose-600 {
   color: #f2a0a0;
 }
 
@@ -594,6 +611,85 @@ html[data-theme="dark"] .workspace-page h1 {
 
 html[data-theme="dark"] .workspace-page h1 + p {
   color: #b8c4bb;
+}
+
+html[data-theme="dark"] .student-profile aside {
+  border-color: #33443a;
+  background-color: #17231b;
+}
+
+html[data-theme="dark"] .student-profile nav[aria-label="Profile sections"] button {
+  color: #c3cec6;
+}
+
+html[data-theme="dark"] .student-profile nav[aria-label="Profile sections"] button[aria-current="page"] {
+  background-color: #293d30;
+  color: #f4f7f4;
+  box-shadow: inset 0 0 0 1px #4c6854, 0 1px 3px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="dark"] .student-profile nav[aria-label="Profile sections"] button[aria-current="page"] svg {
+  color: #9de0b0;
+}
+
+html[data-theme="dark"] .student-profile nav[aria-label="Profile sections"] button:not([aria-current="page"]):hover {
+  background-color: #223229;
+  color: #f4f7f4;
+}
+
+html[data-theme="dark"] .student-profile .bg-slate-50\/80,
+html[data-theme="dark"] .student-profile .bg-slate-50\/70,
+html[data-theme="dark"] .student-profile .bg-slate-50\/60 {
+  background-color: #17231b;
+}
+
+html[data-theme="dark"] .student-profile .bg-primary-50\/70 {
+  background-color: #1a2a20;
+}
+
+html[data-theme="dark"] .student-profile .border-slate-200 {
+  border-color: #33443a;
+}
+
+html[data-theme="dark"] .student-profile input[type="file"] {
+  color: #c3cec6;
+}
+
+html[data-theme="dark"] .student-profile input[type="file"]::file-selector-button {
+  background-color: #20352a;
+  color: #a7e4b7;
+}
+
+html[data-theme="dark"] .student-profile button.text-rose-700 {
+  color: #f2a0a0;
+}
+
+html[data-theme="dark"] .student-profile button.border-rose-200 {
+  border-color: #71383a;
+}
+
+html[data-theme="dark"] .student-profile button.border-rose-200:hover {
+  background-color: #482528;
+}
+
+html[data-theme="dark"] .student-profile .profile-section-float {
+  border-color: rgba(91, 116, 98, 0.72);
+  background-color: rgba(21, 29, 24, 0.84);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.38);
+}
+
+html[data-theme="dark"] .student-profile .profile-section-float button:not([aria-current="page"]) {
+  color: #c3cec6;
+}
+
+html[data-theme="dark"] .student-profile .profile-section-float button:not([aria-current="page"]):hover {
+  background-color: #293d30;
+  color: #f4f7f4;
+}
+
+html[data-theme="dark"] .student-profile .profile-section-float button[aria-current="page"] {
+  background-color: #294631;
+  color: #b6f2ce;
 }
 
 html[data-theme="dark"] .workspace-page .bg-white.rounded-2xl {

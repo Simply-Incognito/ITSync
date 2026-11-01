@@ -42,6 +42,42 @@ export interface DownloadableDocument {
   originalName: string;
 }
 
+export interface StudentVerificationDocument {
+  documentId: string;
+  documentType: 'student_id' | 'biodata';
+  originalName: string;
+  contentType: string;
+  byteSize: number;
+  createdAt: string;
+}
+
+export async function listStudentVerificationDocuments(
+  studentId: Types.ObjectId,
+): Promise<StudentVerificationDocument[]> {
+  const documents = await StudentDocument.find({
+    uploadedBy: studentId,
+    isProfileDocument: true,
+    documentType: { $in: [...studentVerificationDocumentTypes] },
+  })
+    .select('_id documentType originalName contentType byteSize createdAt')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return documents
+    .filter(
+      (document): document is typeof document & { documentType: 'student_id' | 'biodata' } =>
+        document.documentType === 'student_id' || document.documentType === 'biodata',
+    )
+    .map((document) => ({
+      documentId: String(document._id),
+      documentType: document.documentType,
+      originalName: document.originalName,
+      contentType: document.contentType,
+      byteSize: document.byteSize,
+      createdAt: document.createdAt.toISOString(),
+    }));
+}
+
 async function validateFile(file: Express.Multer.File, documentType: DocumentType) {
   const maxBytes = documentType === 'student_id' || documentType === 'biodata'
     ? maxStudentVerificationDocumentBytes
@@ -167,8 +203,23 @@ export async function uploadStudentDocument(input: {
   file: Express.Multer.File;
   documentType: DocumentType;
   uploadedBy: Types.ObjectId;
+  saveForProfile?: boolean;
 }): Promise<UploadedDocument> {
-  const { file, documentType, uploadedBy } = input;
+  const { file, documentType, uploadedBy, saveForProfile = false } = input;
+
+  if (saveForProfile) {
+    const existingDocument = await StudentDocument.exists({
+      uploadedBy,
+      isProfileDocument: true,
+    });
+    if (existingDocument) {
+      throw new AppError(
+        'Remove your current profile verification document before uploading another.',
+        409,
+        'PROFILE_DOCUMENT_ALREADY_EXISTS',
+      );
+    }
+  }
 
   const detectedType = await validateFile(file, documentType);
   const originalName = safeOriginalName(file.originalname);
@@ -196,6 +247,7 @@ export async function uploadStudentDocument(input: {
     const record = await StudentDocument.create({
       uploadedBy,
       documentType,
+      isProfileDocument: saveForProfile,
       originalName,
       contentType: detectedType.mime,
       byteSize: file.size,
@@ -215,8 +267,47 @@ export async function uploadStudentDocument(input: {
     };
   } catch (error) {
     await bucket.delete(storageId).catch(() => undefined);
+    if (saveForProfile && typeof error === 'object' && error !== null && 'code' in error && error.code === 11000) {
+      throw new AppError(
+        'Remove your current profile verification document before uploading another.',
+        409,
+        'PROFILE_DOCUMENT_ALREADY_EXISTS',
+      );
+    }
     throw error;
   }
+}
+
+export async function removeStudentProfileDocument(
+  documentId: Types.ObjectId,
+  studentId: Types.ObjectId,
+): Promise<{ retainedForApplications: boolean }> {
+  const document = await StudentDocument.findOne({
+    _id: documentId,
+    uploadedBy: studentId,
+    isProfileDocument: true,
+    documentType: { $in: [...studentVerificationDocumentTypes] },
+  })
+    .select('_id storageId')
+    .lean();
+
+  if (!document) {
+    throw new AppError('Document was not found.', 404, 'DOCUMENT_NOT_FOUND');
+  }
+
+  const isAttachedToApplication = await Application.exists({ documents: documentId });
+  if (isAttachedToApplication) {
+    await StudentDocument.updateOne(
+      { _id: documentId, uploadedBy: studentId, isProfileDocument: true },
+      { $set: { isProfileDocument: false } },
+    );
+    return { retainedForApplications: true };
+  }
+
+  const bucket = getStudentDocumentBucket();
+  await bucket.delete(document.storageId);
+  await StudentDocument.deleteOne({ _id: documentId, uploadedBy: studentId });
+  return { retainedForApplications: false };
 }
 
 export async function assertStudentVerificationDocuments(

@@ -13,6 +13,7 @@ import type {
   RegisterData,
   StudentProfile,
   StudentProfileInput,
+  StudentVerificationDocument,
   StudentVerificationDocumentType,
   UploadedStudentDocument,
   User,
@@ -404,6 +405,22 @@ export const applicationApi = {
 }
 
 export const studentDocumentApi = {
+  listMy: () =>
+    request<{ documents: StudentVerificationDocument[] }>('/documents/student/me'),
+  removeProfileDocument: (documentId: string) =>
+    request<{ retainedForApplications: boolean }>(
+      `/documents/student/profile/${encodeURIComponent(documentId)}`,
+      { method: 'DELETE' },
+    ),
+  uploadProfileDocument: (file: File, documentType: StudentVerificationDocumentType) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('documentType', documentType)
+    return request<{ document: UploadedStudentDocument }>('/documents/student/profile', {
+      method: 'POST',
+      body: formData,
+    })
+  },
   upload: async (file: File, documentType: StudentVerificationDocumentType) => {
     const formData = new FormData()
     formData.append('file', file)

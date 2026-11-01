@@ -8,6 +8,8 @@ import {
   deleteDocument,
   downloadDocument,
   downloadStudentApplicationDocument,
+  listStudentVerificationDocuments,
+  removeStudentProfileDocument,
   uploadOrganizationDocument,
   uploadStudentDocument,
 } from '../services/document.service.js';
@@ -67,6 +69,49 @@ const studentAccess = [requireAuthentication, requireRoles('student')];
 const orgAccess = [requireAuthentication, requireRoles('organization_representative')];
 
 export const documentRouter = Router();
+
+documentRouter.get('/student/me', ...studentAccess, async (request, response) => {
+  const documents = await listStudentVerificationDocuments(
+    new Types.ObjectId(requireIdentity(request).id),
+  );
+  response.json({ documents });
+});
+
+documentRouter.delete('/student/profile/:documentId', ...studentAccess, async (request, response) => {
+  const result = await removeStudentProfileDocument(
+    parseDocumentId(request),
+    new Types.ObjectId(requireIdentity(request).id),
+  );
+  response.json(result);
+});
+
+documentRouter.post(
+  '/student/profile',
+  ...studentAccess,
+  upload.single('file'),
+  async (request, response) => {
+    const input = studentDocumentUploadSchema.parse({
+      documentType: request.body.documentType,
+    });
+
+    if (input.documentType === 'cv') {
+      throw new AppError(
+        'A profile verification document must be a student ID or biodata.',
+        400,
+        'INVALID_VERIFICATION_DOCUMENT_TYPE',
+      );
+    }
+
+    const document = await uploadStudentDocument({
+      file: requireFile(request),
+      documentType: input.documentType,
+      uploadedBy: new Types.ObjectId(requireIdentity(request).id),
+      saveForProfile: true,
+    });
+
+    response.status(201).json({ document });
+  },
+);
 
 documentRouter.post(
   '/student',

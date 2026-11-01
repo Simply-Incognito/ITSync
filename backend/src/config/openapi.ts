@@ -866,6 +866,59 @@ export const openApiDocument = {
         },
       },
     },
+    '/documents/student/me': {
+      get: {
+        summary: "List the authenticated student's saved ID and biodata documents",
+        tags: ['Documents'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Student verification documents available for applications.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+        },
+      },
+    },
+    '/documents/student/profile': {
+      post: {
+        summary: 'Save one student ID or biodata document to the student profile',
+        tags: ['Documents'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['documentType', 'file'],
+                properties: {
+                  documentType: { type: 'string', enum: ['student_id', 'biodata'] },
+                  file: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Profile verification document uploaded.' },
+          '400': { description: 'Invalid file or document type.' },
+          '409': { description: 'A profile verification document is already saved.' },
+        },
+      },
+    },
+    '/documents/student/profile/:documentId': {
+      delete: {
+        summary: 'Remove a student verification document from profile reuse',
+        tags: ['Documents'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Document removed; application-linked documents are retained.' },
+          '404': { description: 'Document not found.' },
+        },
+      },
+    },
     '/documents/student': {
       post: {
         summary: 'Upload a student ID or biodata for opportunity application verification',

@@ -1,11 +1,13 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Check, GraduationCap, MapPin, Save, User, Wrench } from 'lucide-react'
+import { ArrowRight, Check, FileText, GraduationCap, MapPin, Save, Trash2, Upload, User, Wrench } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import TagInput from '../../components/TagInput'
 import { notify } from '../../lib/notify'
+import { studentDocumentApi } from '../../services/api'
+import type { StudentVerificationDocument, StudentVerificationDocumentType } from '../../types/domain'
 
 const profileSections = [
   { id: 'about', label: 'About', icon: User },
@@ -101,6 +103,12 @@ function ProfileField({
 export default function StudentProfile() {
   const { studentProfile, updateProfile } = useAuth()
   const [activeSection, setActiveSection] = useState<ProfileSection>('about')
+  const [verificationDocuments, setVerificationDocuments] = useState<StudentVerificationDocument[]>([])
+  const [verificationDocumentType, setVerificationDocumentType] =
+    useState<StudentVerificationDocumentType>('student_id')
+  const [verificationFile, setVerificationFile] = useState<File | null>(null)
+  const [uploadingDocument, setUploadingDocument] = useState(false)
+  const [removingDocument, setRemovingDocument] = useState(false)
   const [formData, setFormData] = useState({
     fullName: '',
     phoneNumber: '',
@@ -115,6 +123,14 @@ export default function StudentProfile() {
     skills: [] as string[],
   })
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    void studentDocumentApi.listMy()
+      .then(({ documents }) => setVerificationDocuments(documents))
+      .catch((error: unknown) => {
+        notify.error(error instanceof Error ? error.message : 'Unable to load your verification documents.')
+      })
+  }, [])
 
   useEffect(() => {
     if (studentProfile) {
@@ -142,6 +158,60 @@ export default function StudentProfile() {
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((current) => ({ ...current, [event.target.name]: event.target.value }))
+  }
+
+  const handleVerificationUpload = async () => {
+    if (!verificationFile) {
+      notify.error('Choose a student ID or biodata file to upload.')
+      return
+    }
+
+    if (verificationFile.size === 0 || verificationFile.size > 1024 * 1024) {
+      notify.error('The verification document must be no larger than 1 MB.')
+      return
+    }
+
+    setUploadingDocument(true)
+    try {
+      const { document } = await studentDocumentApi.uploadProfileDocument(verificationFile, verificationDocumentType)
+      setVerificationDocuments((current) => [
+        {
+          documentId: document.documentId,
+          documentType: document.documentType,
+          originalName: document.originalName,
+          contentType: document.contentType,
+          byteSize: document.byteSize,
+          createdAt: new Date().toISOString(),
+        },
+        ...current,
+      ])
+      setVerificationFile(null)
+      notify.success('Verification document uploaded. You can reuse it when applying.')
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : 'Unable to upload your verification document.')
+    } finally {
+      setUploadingDocument(false)
+    }
+  }
+
+  const handleVerificationRemoval = async (documentId: string) => {
+    setRemovingDocument(true)
+    try {
+      const { retainedForApplications } = await studentDocumentApi.removeProfileDocument(documentId)
+      setVerificationDocuments((current) =>
+        current.filter((document) => document.documentId !== documentId),
+      )
+      setVerificationFile(null)
+      notify.success(
+        retainedForApplications
+          ? 'Removed from your profile. Existing applications will keep their document.'
+          : 'Verification document removed.',
+      )
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : 'Unable to remove your verification document.')
+    } finally {
+      setRemovingDocument(false)
+    }
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -188,7 +258,7 @@ export default function StudentProfile() {
   const completedCount = Object.values(completedSections).filter(Boolean).length
 
   return (
-    <div className="workspace-page min-h-screen bg-slate-50 py-6 sm:py-10">
+    <div className="student-profile workspace-page min-h-screen bg-slate-50 py-6 pb-24 sm:py-10 sm:pb-10">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
           <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -212,11 +282,11 @@ export default function StudentProfile() {
 
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="grid min-h-[560px] md:grid-cols-[220px_minmax(0,1fr)]">
-              <aside className="border-b border-slate-200 bg-slate-50/80 p-3 md:border-b-0 md:border-r md:p-4">
+              <aside className="hidden border-b border-slate-200 bg-slate-50/80 p-3 md:block md:border-b-0 md:border-r md:p-4">
                 <div className="mb-4 hidden px-3 pt-2 md:block">
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Profile sections</p>
                 </div>
-                <nav aria-label="Profile sections" className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+                <nav aria-label="Profile sections" className="flex flex-col gap-1">
                   {profileSections.map((section) => {
                     const Icon = section.icon
                     const isActive = activeSection === section.id
@@ -225,10 +295,8 @@ export default function StudentProfile() {
                         key={section.id}
                         type="button"
                         aria-current={isActive ? 'page' : undefined}
-                        onClick={() => {
-                          setActiveSection(section.id)
-                        }}
-                        className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition md:w-full ${
+                        onClick={() => setActiveSection(section.id)}
+                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
                           isActive
                             ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200'
                             : 'text-slate-500 hover:bg-white/70 hover:text-slate-800'
@@ -412,6 +480,95 @@ export default function StudentProfile() {
                           min={1}
                           max={104}
                         />
+                        <section className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+                          <div>
+                            <h3 className="text-sm font-semibold text-slate-800">Student verification document</h3>
+                            <p className="mt-1 text-xs leading-5 text-slate-600">
+                              Save one student ID or biodata for applications. Remove it before replacing it; you can still choose a different document while applying. PDF, JPEG, or PNG up to 1 MB.
+                            </p>
+                          </div>
+                          {verificationDocuments.length > 0 && (
+                            <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700">
+                                  <FileText size={18} aria-hidden="true" />
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-slate-800">
+                                    {verificationDocuments[0].originalName}
+                                  </p>
+                                  <p className="mt-0.5 text-xs text-slate-500">
+                                    {verificationDocuments[0].documentType === 'student_id' ? 'Student ID' : 'Biodata'}
+                                    {' · Available for applications'}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => void handleVerificationRemoval(verificationDocuments[0].documentId)}
+                                disabled={removingDocument || uploadingDocument}
+                                className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-rose-200 px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Trash2 size={15} aria-hidden="true" />
+                                {removingDocument ? 'Removing…' : 'Remove document'}
+                              </button>
+                            </div>
+                          )}
+                          {verificationDocuments.length === 0 && (
+                            <>
+                              <div className="grid gap-3 sm:grid-cols-[minmax(0,160px)_minmax(0,1fr)]">
+                                <label className="block">
+                                  <span className="mb-2 block text-sm font-medium text-slate-600">Document type</span>
+                                  <select
+                                    value={verificationDocumentType}
+                                    onChange={(event) =>
+                                      setVerificationDocumentType(
+                                        event.target.value === 'biodata' ? 'biodata' : 'student_id',
+                                      )
+                                    }
+                                    className={inputClassName}
+                                  >
+                                    <option value="student_id">Student ID</option>
+                                    <option value="biodata">Biodata</option>
+                                  </select>
+                                </label>
+                                <label className="block">
+                                  <span className="mb-2 block text-sm font-medium text-slate-600">Choose file</span>
+                                  <input
+                                    key={verificationFile?.name || 'empty-verification-file'}
+                                    type="file"
+                                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    onChange={(event) => {
+                                      const file = event.target.files?.[0] ?? null
+                                      if (file && (file.size === 0 || file.size > 1024 * 1024)) {
+                                        notify.error('The verification document must be no larger than 1 MB.')
+                                        event.target.value = ''
+                                        setVerificationFile(null)
+                                        return
+                                      }
+                                      setVerificationFile(file)
+                                    }}
+                                    className="block min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:font-medium file:text-primary-700"
+                                  />
+                                </label>
+                              </div>
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="min-w-0 truncate text-xs text-slate-500">
+                                  {verificationFile ? verificationFile.name : 'No file selected'}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleVerificationUpload()}
+                                  disabled={!verificationFile || uploadingDocument || removingDocument}
+                                  className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <Upload size={16} aria-hidden="true" />
+                                  {uploadingDocument ? 'Uploading…' : 'Upload document'}
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </section>
                       </>
                     )}
 
@@ -482,6 +639,38 @@ export default function StudentProfile() {
           </div>
         </motion.div>
       </div>
+      <nav
+        aria-label="Profile sections"
+        className="profile-section-float fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 z-50 flex w-[80vw] max-w-sm -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-slate-200/70 bg-white/75 px-2 py-2 shadow-lg shadow-slate-900/10 backdrop-blur-xl md:hidden"
+      >
+        {profileSections.map((section) => {
+          const Icon = section.icon
+          const isActive = activeSection === section.id
+          return (
+            <button
+              key={section.id}
+              type="button"
+              aria-label={`${section.label}${completedSections[section.id] ? ', complete' : ''}`}
+              aria-current={isActive ? 'page' : undefined}
+              aria-pressed={isActive}
+              title={section.label}
+              onClick={() => setActiveSection(section.id)}
+              className={`relative flex h-11 min-w-0 flex-1 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
+                isActive
+                  ? 'bg-primary-100 text-primary-800 shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Icon size={19} aria-hidden="true" />
+              {completedSections[section.id] && (
+                <span className="absolute right-1 top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary-600 text-white">
+                  <Check size={9} strokeWidth={3} aria-hidden="true" />
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </nav>
     </div>
   )
 }
