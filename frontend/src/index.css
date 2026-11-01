@@ -82,11 +82,11 @@ body {
   margin: 0;
   background-color: #fcfcfa;
   background-image:
-    radial-gradient(circle at 1px 1px, rgba(35, 134, 83, 0.055) 0.8px, transparent 1px),
-    radial-gradient(ellipse at 12% -10%, rgba(35, 134, 83, 0.09), transparent 42rem),
-    radial-gradient(ellipse at 92% 38%, rgba(201, 188, 151, 0.1), transparent 34rem),
-    linear-gradient(145deg, #fcfcfa 0%, #f8f9f5 54%, #fcfcfa 100%);
-  background-size: 28px 28px, auto, auto, auto;
+    radial-gradient(circle at 1px 1px, rgba(35, 134, 83, 0.12) 1px, transparent 1.4px),
+    radial-gradient(ellipse at 8% 12%, rgba(75, 160, 105, 0.17), transparent 38rem),
+    radial-gradient(ellipse at 92% 48%, rgba(201, 188, 151, 0.2), transparent 34rem),
+    linear-gradient(145deg, #f5f8f3 0%, #fbfaf6 52%, #f2f6f1 100%);
+  background-size: 24px 24px, auto, auto, auto;
   background-attachment: fixed;
   color: var(--text);
 }
@@ -155,7 +155,12 @@ button:disabled {
 
 /* Give the existing utility-based screens a consistent, softer canvas. */
 .bg-slate-50 {
-  background-color: rgba(252, 252, 250, 0.82);
+  background-color: rgba(252, 252, 250, 0.88);
+}
+
+.min-h-screen.bg-slate-50,
+.bg-paper {
+  background-color: transparent;
 }
 
 .text-slate-800 {
@@ -387,11 +392,11 @@ html[data-theme="dark"] {
 html[data-theme="dark"] body {
   background-color: #0f1512;
   background-image:
-    radial-gradient(circle at 1px 1px, rgba(91, 151, 108, 0.075) 0.8px, transparent 1px),
-    radial-gradient(ellipse at 12% -10%, rgba(91, 151, 108, 0.12), transparent 42rem),
-    radial-gradient(ellipse at 92% 38%, rgba(77, 95, 78, 0.12), transparent 34rem),
-    linear-gradient(145deg, #0f1512 0%, #131b16 54%, #0f1512 100%);
-  background-size: 28px 28px, auto, auto, auto;
+    radial-gradient(circle at 1px 1px, rgba(91, 151, 108, 0.14) 1px, transparent 1.4px),
+    radial-gradient(ellipse at 8% 12%, rgba(57, 110, 75, 0.24), transparent 38rem),
+    radial-gradient(ellipse at 92% 48%, rgba(77, 95, 78, 0.2), transparent 34rem),
+    linear-gradient(145deg, #111a14 0%, #151b17 52%, #101813 100%);
+  background-size: 24px 24px, auto, auto, auto;
   background-attachment: fixed;
   color: var(--text);
 }
@@ -402,7 +407,12 @@ html[data-theme="dark"] .bg-white\/80 {
 }
 
 html[data-theme="dark"] .bg-slate-50 {
-  background-color: rgba(15, 21, 18, 0.84);
+  background-color: rgba(15, 21, 18, 0.9);
+}
+
+html[data-theme="dark"] .min-h-screen.bg-slate-50,
+html[data-theme="dark"] .bg-paper {
+  background-color: transparent;
 }
 
 html[data-theme="dark"] .hover\:bg-slate-50:hover {
