@@ -4,13 +4,6 @@ import { ArrowRight, LogOut, Menu, Moon, Sparkles, Sun, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getDashboardPath } from '../utils/navigation'
 
-const publicLinks = [
-  { label: 'Home', href: '/' },
-  { label: 'Why ITSync', href: '/#features' },
-  { label: 'For students', href: '/#students' },
-  { label: 'For organizations', href: '/#organizations' },
-]
-
 function getInitialTheme() {
   try {
     const savedTheme = localStorage.getItem('theme')
@@ -70,19 +63,13 @@ export default function Navbar() {
           <span className="text-base font-bold tracking-tight text-ink sm:text-lg">ITSync</span>
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden items-center gap-4 lg:flex xl:gap-6">
-          {isAuthenticated ? (
+        {isAuthenticated && (
+          <nav aria-label="Primary navigation" className="hidden items-center gap-4 lg:flex xl:gap-6">
             <Link to={dashboardLink} className="rounded-lg px-2 py-2 text-sm font-medium text-ink-muted transition hover:text-primary-700">
               Dashboard
             </Link>
-          ) : (
-            publicLinks.map((item) => (
-              <a key={item.label} href={item.href} className="rounded-lg px-2 py-2 text-sm font-medium text-ink-muted transition hover:text-primary-700">
-                {item.label}
-              </a>
-            ))
-          )}
-        </nav>
+          </nav>
+        )}
 
         <div className="flex shrink-0 items-center gap-2">
           <div className="hidden items-center gap-3 lg:flex">
@@ -144,21 +131,14 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <>
-                {publicLinks.map((item) => (
-                  <a key={item.label} href={item.href} onClick={closeMobileMenu} className="flex min-h-11 items-center rounded-xl px-3 text-sm font-medium text-ink-muted hover:bg-surface-soft hover:text-primary-700">
-                    {item.label}
-                  </a>
-                ))}
-                <div className="mt-2 grid grid-cols-2 gap-2 border-t border-line pt-3">
-                  <Link to="/login" onClick={closeMobileMenu} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line px-3 text-sm font-semibold text-ink transition hover:bg-surface-soft">
-                    Sign in
-                  </Link>
-                  <Link to="/register" onClick={closeMobileMenu} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-primary-600 px-3 text-sm font-semibold text-white transition hover:bg-primary-700">
-                    Get started <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                </div>
-              </>
+              <div className="grid grid-cols-2 gap-2">
+                <Link to="/login" onClick={closeMobileMenu} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-line px-3 text-sm font-semibold text-ink transition hover:bg-surface-soft">
+                  Sign in
+                </Link>
+                <Link to="/register" onClick={closeMobileMenu} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-primary-600 px-3 text-sm font-semibold text-white transition hover:bg-primary-700">
+                  Get started <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </div>
             )}
           </div>
         </nav>
