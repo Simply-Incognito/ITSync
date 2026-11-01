@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/AuthContext'
+import type { UserRole } from './types/domain'
 const Layout = lazy(() => import('./components/Layout'))
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
 const Home = lazy(() => import('./pages/Home'))
@@ -25,12 +26,21 @@ const AdminOpportunities = lazy(() => import('./pages/admin/Opportunities'))
 const AdminApplications = lazy(() => import('./pages/admin/Applications'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
-function AdminRoute() {
-  const { user } = useAuth()
-  if (!user) return <Navigate to="/login" replace />
-  if (user.role !== 'administrator') {
-    return <Navigate to={user.role === 'student' ? '/student/dashboard' : '/organization/dashboard'} replace />
+const roleHome: Record<UserRole, string> = {
+  student: '/student/dashboard',
+  organization_representative: '/organization/dashboard',
+  administrator: '/admin/dashboard',
+}
+
+function RoleRoute({ allowedRole }: { allowedRole: UserRole }) {
+  const { user, isLoading } = useAuth()
+
+  if (isLoading) {
+    return <div role="status" className="p-12 text-center text-slate-500">Checking your session…</div>
   }
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== allowedRole) return <Navigate to={roleHome[user.role]} replace />
+
   return <Outlet />
 }
 
@@ -45,19 +55,19 @@ export default function App() {
             <Route path="register" element={<Register />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="reset-password" element={<ResetPassword />} />
-            <Route path="student">
+            <Route path="student" element={<RoleRoute allowedRole="student" />}>
               <Route path="dashboard" element={<StudentDashboard />} />
               <Route path="profile" element={<StudentProfile />} />
               <Route path="opportunities" element={<StudentOpportunities />} />
               <Route path="applications" element={<StudentApplications />} />
             </Route>
-            <Route path="organization">
+            <Route path="organization" element={<RoleRoute allowedRole="organization_representative" />}>
               <Route path="dashboard" element={<OrganizationDashboard />} />
               <Route path="profile" element={<OrganizationProfile />} />
               <Route path="opportunities" element={<OrganizationOpportunities />} />
               <Route path="verification" element={<OrganizationVerification />} />
             </Route>
-            <Route path="admin" element={<AdminRoute />}>
+            <Route path="admin" element={<RoleRoute allowedRole="administrator" />}>
               <Route element={<AdminLayout />}>
                 <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
