@@ -59,8 +59,8 @@ function getInitialPosition(): Position {
     }
   }
   return clampPosition({
-    left: window.innerWidth - buttonSize - 24,
-    top: window.innerHeight - buttonSize - 96,
+    left: 24,
+    top: window.innerHeight - buttonSize - 24,
   });
 }
 
