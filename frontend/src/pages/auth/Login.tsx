@@ -64,17 +64,9 @@ export default function Login() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label htmlFor="password" className="block text-sm font-medium text-ink">
-                  Password
-                </label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm font-medium text-primary-600 hover:text-primary-700"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <label htmlFor="password" className="block text-sm font-medium text-ink mb-2">
+                Password
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                 <input
@@ -93,6 +85,14 @@ export default function Login() {
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
+              </div>
+              <div className="mt-2 text-right">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                >
+                  Forgot password?
+                </Link>
               </div>
             </div>
 
