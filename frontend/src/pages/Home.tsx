@@ -69,7 +69,7 @@ export default function Home() {
       <section aria-labelledby="hero-heading" className="relative isolate scroll-mt-24 bg-paper">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_0%,rgba(46,184,112,0.17),transparent_60%)]"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_0%,rgba(80,145,99,0.12),transparent_60%)]"
         />
         <div
           aria-hidden="true"
@@ -210,7 +210,7 @@ export default function Home() {
       <section aria-labelledby="cta-heading" className="relative isolate overflow-hidden px-5 py-14 sm:px-8 sm:py-20">
         <div
           aria-hidden="true"
-          className="absolute inset-0 -z-10 bg-gradient-to-br from-[#123b29] via-[#176341] to-[#0d4b37]"
+          className="absolute inset-0 -z-10 bg-gradient-to-br from-[#1d3527] via-[#234b34] to-[#1b3e31]"
         />
         <div
           aria-hidden="true"
