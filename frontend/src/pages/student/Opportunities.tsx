@@ -694,7 +694,7 @@ export default function StudentOpportunities() {
                                 {opportunity.title}
                               </h3>
                               <span
-                                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                                className={`rounded-full px-2.5 py-1 text-[8.8px] font-semibold ${
                                   isClosed
                                     ? 'bg-slate-100 text-slate-600'
                                     : 'bg-emerald-50 text-emerald-700'
@@ -773,7 +773,7 @@ export default function StudentOpportunities() {
                           <Bookmark size={16} className={isSaved ? 'fill-primary-600 text-primary-600' : ''} />
                           {isSaved ? 'Saved' : 'Save'}
                         </button>
-                        <span className="absolute bottom-4 right-4 rounded-full border border-white/40 bg-slate-950/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
+                        <span className="absolute bottom-4 right-4 rounded-full border border-white/40 bg-slate-950/60 px-3 py-1 text-[8px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
                           {formatArrangement(opportunity.workArrangement)}
                         </span>
                       </div>

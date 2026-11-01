@@ -105,7 +105,7 @@ export default function Home() {
             <motion.h1
               id="hero-heading"
               variants={revealVariants}
-              className="mx-auto mt-6 max-w-4xl text-balance font-heading text-[clamp(2rem,9.6vw,4.75rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink"
+              className="mx-auto mt-6 max-w-4xl text-balance font-heading text-[clamp(1.6rem,7.68vw,3.8rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-ink"
             >
               <span className="block">Find your next</span>
               <span className="mt-1 block text-primary-700">SIWES placement</span>
