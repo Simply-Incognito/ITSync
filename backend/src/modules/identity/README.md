@@ -15,6 +15,10 @@ Owns account registration, login, password recovery, session management, student
 
 All routes except registration, login, and password recovery/reset require `Authorization: Bearer <token>` where indicated. User and reset tokens are random opaque values; only SHA-256 hashes are persisted. Passwords are stored using Node.js scrypt with a per-password random salt.
 
+## Provision an administrator
+
+Administrator accounts cannot be created through public registration. To create one in the database configured by `backend/.env`, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the process environment and run `npm run seed:admin` from `backend`. The script stores a scrypt password hash and refuses to modify an account if that email already exists. Do not commit administrator credentials or put them in a tracked file.
+
 Password recovery sends an email when SMTP is configured using `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, optional `SMTP_USER`/`SMTP_PASSWORD`, and `SMTP_FROM`. The link targets `/reset-password` on `WEB_APP_URL`. Without SMTP, development and test responses include the one-time token for local workflows. Production deployments must configure SMTP before enabling password recovery.
 
 ## Test password recovery with Mailtrap

@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Building2, FileText, Users, Briefcase, Clock, CheckCircle, Plus, Eye } from 'lucide-react'
-import { organizationApi, opportunityApi, applicationApi } from '../../services/api'
+import { Building2, FileText, Users, Briefcase, Clock, CheckCircle, Plus, Eye, Download } from 'lucide-react'
+import { organizationApi, opportunityApi, applicationApi, studentDocumentApi } from '../../services/api'
+import type { Application, Opportunity, Organization } from '../../types/domain'
+import { getOpportunityTitle, getStudentName } from '../../utils/display'
+import { notify } from '../../lib/notify'
 
 export default function OrganizationDashboard() {
-  const [organization, setOrganization] = useState<any>(null)
-  const [opportunities, setOpportunities] = useState<any[]>([])
-  const [applications, setApplications] = useState<any[]>([])
+  const [organization, setOrganization] = useState<Organization | null>(null)
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([])
+  const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
+  const [downloadingDocumentId, setDownloadingDocumentId] = useState('')
 
   useEffect(() => {
     fetchData()
@@ -16,16 +20,28 @@ export default function OrganizationDashboard() {
 
   const fetchData = async () => {
     try {
-      const [orgResponse, oppResponse, appResponse] = await Promise.all([
-        organizationApi.getProfile(),
-        opportunityApi.listMy(),
-        applicationApi.listAll(),
+      const orgResponse = await organizationApi.getProfile()
+      const currentOrganization = orgResponse.organization
+      setOrganization(currentOrganization)
+
+      const [opportunitiesResult, applicationsResult] = await Promise.allSettled([
+        currentOrganization?.verificationStatus === 'verified'
+          ? opportunityApi.listMy()
+          : Promise.resolve({ opportunities: [] }),
+        applicationApi.listForOrganization(),
       ])
-      setOrganization(orgResponse.organization)
-      setOpportunities(oppResponse.opportunities)
-      setApplications(appResponse.applications)
+      if (opportunitiesResult.status === 'fulfilled') {
+        setOpportunities(opportunitiesResult.value.opportunities)
+      } else {
+        throw opportunitiesResult.reason
+      }
+      if (applicationsResult.status === 'fulfilled') {
+        setApplications(applicationsResult.value.applications)
+      } else {
+        throw applicationsResult.reason
+      }
     } catch (error) {
-      console.error('Failed to fetch data:', error)
+      notify.error(error instanceof Error ? error.message : 'Unable to load organization data.')
     } finally {
       setLoading(false)
     }
@@ -37,6 +53,29 @@ export default function OrganizationDashboard() {
     { label: 'Under Review', value: applications.filter((a) => a.status === 'under_review').length, icon: Clock, color: 'bg-amber-100', iconColor: 'text-amber-700' },
     { label: 'Accepted', value: applications.filter((a) => a.status === 'accepted').length, icon: CheckCircle, color: 'bg-primary-100', iconColor: 'text-primary-700' },
   ]
+
+  const downloadVerificationDocument = async (
+    applicationId: string,
+    documentId: string,
+    fileName: string,
+  ) => {
+    setDownloadingDocumentId(documentId)
+    try {
+      const url = await studentDocumentApi.downloadForOrganization(applicationId, documentId)
+      const link = window.document.createElement('a')
+      link.href = url
+      link.download = fileName
+      link.rel = 'noreferrer'
+      window.document.body.append(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : 'Unable to download the document.')
+    } finally {
+      setDownloadingDocumentId('')
+    }
+  }
 
   if (loading) {
     return (
@@ -75,7 +114,7 @@ export default function OrganizationDashboard() {
         </motion.div>
 
         {/* Verification Status */}
-        {organization?.verificationStatus !== 'verified' && (
+        {organization && organization.verificationStatus !== 'verified' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -94,7 +133,9 @@ export default function OrganizationDashboard() {
                 to="/organization/verification"
                 className="px-4 py-2 bg-yellow-600 text-white font-semibold rounded-xl hover:bg-yellow-700 transition-colors"
               >
-                Complete Verification
+                {organization.verificationStatus === 'pending'
+                  ? 'View Verification Status'
+                  : 'Complete Verification'}
               </Link>
             </div>
           </motion.div>
@@ -176,16 +217,44 @@ export default function OrganizationDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-slate-800">
-                        {app.studentId?.fullName || 'Student'}
+                        {getStudentName(app.studentId)}
                       </h3>
                       <p className="text-sm text-slate-600 mt-1">
-                        {app.opportunityId?.title || 'Opportunity'}
+                        {getOpportunityTitle(app.opportunityId)}
                       </p>
                     </div>
                     <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
                       {app.status.replace('_', ' ')}
                     </span>
                   </div>
+                  {app.documents?.length ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {app.documents.map((document) => (
+                        <button
+                          key={document._id}
+                          type="button"
+                          disabled={downloadingDocumentId === document._id}
+                          onClick={() =>
+                            void downloadVerificationDocument(
+                              app._id,
+                              document._id,
+                              document.originalName,
+                            )
+                          }
+                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          <Download size={14} />
+                          {downloadingDocumentId === document._id
+                            ? 'Downloading…'
+                            : `${document.documentType === 'student_id' ? 'Student ID' : 'Biodata'} · ${document.originalName}`}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-slate-500">
+                      No verification document was attached to this application.
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

@@ -58,6 +58,7 @@ export async function createOpportunity(
           opportunityId: opportunity._id,
           organizationId: opportunity.organizationId,
           actorUserId: parseId(actorUserId),
+          action: 'created',
           toStatus: 'draft',
           note: 'Opportunity created.',
         },
@@ -218,7 +219,11 @@ export async function getPublishedOpportunity(opportunityId: string) {
 
 export async function listOpportunitiesForReview(status?: OpportunityStatus) {
   const filter = status ? { status } : { status: 'pending_review' };
-  return Opportunity.find(filter).sort({ createdAt: 1 }).limit(100).lean();
+  return Opportunity.find(filter)
+    .populate('organizationId', 'legalName')
+    .sort({ createdAt: 1 })
+    .limit(100)
+    .lean();
 }
 
 export async function getOpportunityReview(opportunityId: string) {

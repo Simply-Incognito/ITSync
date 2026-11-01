@@ -3,13 +3,16 @@ import { Types } from 'mongoose';
 import { AppError } from '../../../errors/app-error.js';
 import { routeParam } from '../../../utils/route-param.js';
 import { requireAuthentication, requireRoles } from '../../identity/middleware/authenticate.js';
-import type { ApplicationStatus } from '../models/application.model.js';
+import { applicationStatuses, type ApplicationStatus } from '../models/application.model.js';
 import {
   createApplication,
   listApplications,
   updateApplicationStatus,
 } from '../services/application.service.js';
-import { updateApplicationStatusSchema } from '../validations/application.validation.js';
+import {
+  createApplicationSchema,
+  updateApplicationStatusSchema,
+} from '../validations/application.validation.js';
 
 export const applicationRouter = Router();
 
@@ -33,12 +36,21 @@ const studentAccess = [requireAuthentication, requireRoles('student')];
 const orgAccess = [requireAuthentication, requireRoles('organization_representative')];
 const adminAccess = [requireAuthentication, requireRoles('administrator')];
 
+function paginationValue(value: unknown, fallback: number, name: string, maximum: number) {
+  if (value === undefined) return fallback;
+  if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) {
+    throw new AppError(`Invalid ${name}.`, 400, 'INVALID_PAGINATION');
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed > maximum) {
+    throw new AppError(`Invalid ${name}.`, 400, 'INVALID_PAGINATION');
+  }
+  return parsed;
+}
+
 applicationRouter.post('/', ...studentAccess, async (request, response) => {
   const identity = requireIdentity(request);
-  const input = request.body as {
-    opportunityId?: string;
-    studentDocumentIds?: string[];
-  };
+  const input = createApplicationSchema.parse(request.body);
 
   const result = await createApplication(
     {
@@ -48,13 +60,9 @@ applicationRouter.post('/', ...studentAccess, async (request, response) => {
         'A valid opportunityId is required.',
         'INVALID_OPPORTUNITY_ID',
       ),
-      ...(input.studentDocumentIds?.length
-        ? {
-            studentDocumentIds: input.studentDocumentIds.map((documentId) =>
-              parseObjectId(documentId, 'A valid document id is required.', 'INVALID_DOCUMENT_ID'),
-            ),
-          }
-        : {}),
+      studentDocumentIds: input.studentDocumentIds.map((documentId) =>
+        parseObjectId(documentId, 'A valid document id is required.', 'INVALID_DOCUMENT_ID'),
+      ),
     },
     identity.id,
   );
@@ -64,8 +72,10 @@ applicationRouter.post('/', ...studentAccess, async (request, response) => {
 
 applicationRouter.get('/my', ...studentAccess, async (request, response) => {
   const identity = requireIdentity(request);
+  const page = paginationValue(request.query.page, 1, 'page', 100_000);
+  const limit = paginationValue(request.query.limit, 20, 'limit', 100);
   const result = await listApplications(
-    { studentId: new Types.ObjectId(identity.id) },
+    { studentId: new Types.ObjectId(identity.id), page, limit },
     identity.id,
   );
 
@@ -73,12 +83,19 @@ applicationRouter.get('/my', ...studentAccess, async (request, response) => {
 });
 
 applicationRouter.get('/', ...adminAccess, async (request, response) => {
-  const status =
-    typeof request.query.status === 'string'
-      ? (request.query.status as ApplicationStatus)
-      : undefined;
+  const statusValue = request.query.status;
+  if (
+    statusValue !== undefined &&
+    (typeof statusValue !== 'string' ||
+      !applicationStatuses.includes(statusValue as ApplicationStatus))
+  ) {
+    throw new AppError('Invalid application status.', 400, 'INVALID_APPLICATION_STATUS');
+  }
+  const status = statusValue as ApplicationStatus | undefined;
+  const page = paginationValue(request.query.page, 1, 'page', 100_000);
+  const limit = paginationValue(request.query.limit, 20, 'limit', 100);
 
-  const result = await listApplications({ status }, requireIdentity(request).id);
+  const result = await listApplications({ status, page, limit }, requireIdentity(request).id);
   response.json({ applications: result.applications, pagination: result.pagination });
 });
 

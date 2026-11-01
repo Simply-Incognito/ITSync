@@ -1,9 +1,9 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import pino from 'pino';
 import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env.js';
+import { logger } from './config/logger.js';
 import { openApiDocument } from './config/openapi.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { notFoundHandler } from './middleware/not-found.js';
@@ -17,10 +17,10 @@ import { administrationRouter } from './modules/administration/routes/administra
 import { studentRouter } from './modules/students/routes/student.routes.js';
 import { opportunityRouter } from './modules/opportunities/routes/opportunity.routes.js';
 import { applicationRouter } from './modules/applications/routes/application.routes.js';
+import { feedbackRouter } from './modules/feedback/feedback.routes.js';
 
 export function createApp() {
   const app = express();
-  const logger = pino({ level: env.LOG_LEVEL });
 
   app.disable('x-powered-by');
 
@@ -48,11 +48,15 @@ export function createApp() {
     next();
   });
 
-  app.get('/api/v1/openapi.json', (_request, response) => {
-    response.json(openApiDocument);
-  });
+  // The OpenAPI document and interactive docs describe the whole API surface,
+  // so they stay off in production unless explicitly enabled.
+  if (env.NODE_ENV !== 'production' || env.ENABLE_API_DOCS) {
+    app.get('/api/v1/openapi.json', (_request, response) => {
+      response.json(openApiDocument);
+    });
 
-  app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
+    app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
+  }
 
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/auth', authRouter);
@@ -64,6 +68,7 @@ export function createApp() {
   app.use('/api/v1/students', studentRouter);
   app.use('/api/v1/opportunities', opportunityRouter);
   app.use('/api/v1/administration', administrationRouter);
+  app.use('/api/v1/feedback', feedbackRouter);
 
   app.use(notFoundHandler);
 

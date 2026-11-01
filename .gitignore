@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+coverage/
+*.tsbuildinfo
+
+# Logs and OS noise
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/settings.json

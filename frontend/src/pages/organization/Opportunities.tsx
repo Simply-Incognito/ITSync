@@ -1,28 +1,52 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Briefcase, Clock, CheckCircle, XCircle, Eye, Edit } from 'lucide-react'
-import { opportunityApi } from '../../services/api'
+import { Plus, Briefcase, Clock, CheckCircle, XCircle, Edit, Eye, type LucideIcon } from 'lucide-react'
+import { opportunityApi, organizationApi } from '../../services/api'
+import type { Opportunity, OpportunityInput, WorkArrangement } from '../../types/domain'
+import { getErrorMessage } from '../../utils/errors'
+import { getOpportunityImageChoices } from '../../utils/opportunity-images'
+import { notify } from '../../lib/notify'
+
+interface OpportunityFormState {
+  title: string
+  description: string
+  fieldOfStudy: string
+  imageKey: string
+  requiredSkills: string
+  city: string
+  state: string
+  country: string
+  workArrangement: WorkArrangement
+  durationWeeks: string
+  availableSlots: string
+  applicationDeadline: string
+  additionalRequirements: string
+}
+
+const emptyForm: OpportunityFormState = {
+  title: '',
+  description: '',
+  fieldOfStudy: '',
+  imageKey: '',
+  requiredSkills: '',
+  city: '',
+  state: '',
+  country: 'Nigeria',
+  workArrangement: 'onsite',
+  durationWeeks: '',
+  availableSlots: '',
+  applicationDeadline: '',
+  additionalRequirements: '',
+}
 
 export default function OrganizationOpportunities() {
-  const [opportunities, setOpportunities] = useState<any[]>([])
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    fieldOfStudy: '',
-    requiredSkills: '',
-    academicRequirements: '',
-    city: '',
-    state: '',
-    country: 'Nigeria',
-    workArrangement: 'onsite',
-    durationWeeks: '',
-    availableSlots: '',
-    applicationDeadline: '',
-    requiredDocuments: '',
-    additionalRequirements: '',
-  })
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [formData, setFormData] = useState<OpportunityFormState>(emptyForm)
+  const [organizationIndustry, setOrganizationIndustry] = useState('')
 
   useEffect(() => {
     fetchOpportunities()
@@ -30,49 +54,118 @@ export default function OrganizationOpportunities() {
 
   const fetchOpportunities = async () => {
     try {
-      const response = await opportunityApi.listMy()
+      const [response, organizationResponse] = await Promise.all([
+        opportunityApi.listMy(),
+        organizationApi.getProfile(),
+      ])
       setOpportunities(response.opportunities)
+      setOrganizationIndustry(organizationResponse.organization?.industry ?? '')
     } catch (error) {
-      console.error('Failed to fetch opportunities:', error)
+      notify.error(getErrorMessage(error, 'Unable to load opportunities.'))
     } finally {
       setLoading(false)
     }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+
+    if (name === 'workArrangement') {
+      setFormData((current) => ({ ...current, workArrangement: value as WorkArrangement }))
+      return
+    }
+
+    setFormData((current) => ({ ...current, [name]: value }))
+  }
+
+  const openCreateForm = () => {
+    setEditingId(null)
+    setFormData({
+      ...emptyForm,
+      imageKey: getOpportunityImageChoices(organizationIndustry)[0].id,
+    })
+    setShowCreateForm(true)
+  }
+
+  const openEditForm = (opportunity: Opportunity) => {
+    setEditingId(opportunity._id)
+    setFormData({
+      title: opportunity.title,
+      description: opportunity.description,
+      fieldOfStudy: opportunity.fieldOfStudy,
+      imageKey:
+        opportunity.imageKey ?? getOpportunityImageChoices(organizationIndustry)[0].id,
+      requiredSkills: (opportunity.requiredSkills || []).join(', '),
+      city: opportunity.location.city,
+      state: opportunity.location.state,
+      country: opportunity.location.country,
+      workArrangement: opportunity.workArrangement,
+      durationWeeks: String(opportunity.durationWeeks),
+      availableSlots: String(opportunity.availableSlots),
+      applicationDeadline: new Date(opportunity.applicationDeadline).toISOString().slice(0, 10),
+      additionalRequirements: opportunity.additionalRequirements || '',
+    })
+    setShowCreateForm(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitting(true)
+    const data: OpportunityInput = {
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      fieldOfStudy: formData.fieldOfStudy.trim(),
+      imageKey: formData.imageKey,
+      requiredSkills: formData.requiredSkills.split(',').map((value) => value.trim()).filter(Boolean),
+      location: {
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        country: formData.country.trim(),
+      },
+      workArrangement: formData.workArrangement,
+      durationWeeks: Number(formData.durationWeeks),
+      availableSlots: Number(formData.availableSlots),
+      applicationDeadline: new Date(`${formData.applicationDeadline}T23:59:59`).toISOString(),
+      additionalRequirements: formData.additionalRequirements.trim(),
+    }
+
     try {
-      await opportunityApi.create({
-        title: formData.title,
-        description: formData.description,
-        fieldOfStudy: formData.fieldOfStudy,
-        requiredSkills: formData.requiredSkills ? formData.requiredSkills.split(',').map((s) => s.trim()) : [],
-        academicRequirements: formData.academicRequirements,
-        location: {
-          city: formData.city,
-          state: formData.state,
-          country: formData.country,
-        },
-        workArrangement: formData.workArrangement,
-        durationWeeks: parseInt(formData.durationWeeks),
-        availableSlots: parseInt(formData.availableSlots),
-        applicationDeadline: new Date(formData.applicationDeadline),
-        requiredDocuments: formData.requiredDocuments ? formData.requiredDocuments.split(',').map((s) => s.trim()) : [],
-        additionalRequirements: formData.additionalRequirements,
-      })
+      if (editingId) await opportunityApi.update(editingId, data)
+      else await opportunityApi.create(data)
+      await fetchOpportunities()
       setShowCreateForm(false)
-      fetchOpportunities()
+      setEditingId(null)
+      notify.success(editingId ? 'Opportunity updated.' : 'Opportunity created as a draft.')
     } catch (error) {
-      console.error('Failed to create opportunity:', error)
+      notify.error(getErrorMessage(error, 'Failed to save opportunity.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSubmitForReview = async (opportunityId: string) => {
+    try {
+      await opportunityApi.submit(opportunityId)
+      await fetchOpportunities()
+      notify.success('Opportunity submitted for review.')
+    } catch (error) {
+      notify.error(getErrorMessage(error, 'Failed to submit opportunity for review.'))
+    }
+  }
+
+  const handleCloseOpportunity = async (opportunityId: string) => {
+    if (!window.confirm('Close this opportunity? Students will no longer be able to apply.')) return
+    try {
+      await opportunityApi.close(opportunityId)
+      await fetchOpportunities()
+      notify.success('Applications closed.')
+    } catch (error) {
+      notify.error(getErrorMessage(error, 'Failed to close opportunity.'))
     }
   }
 
   const getStatusConfig = (status: string) => {
-    const configs: Record<string, { icon: any; color: string; bg: string }> = {
+    const configs: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
       draft: { icon: Edit, color: 'text-gray-600', bg: 'bg-gray-100' },
       pending_review: { icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100' },
       published: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100' },
@@ -93,7 +186,7 @@ export default function OrganizationOpportunities() {
               <p className="text-slate-600 mt-2">Manage your SIWES postings</p>
             </div>
             <button
-              onClick={() => setShowCreateForm(true)}
+              onClick={openCreateForm}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
             >
               <Plus size={20} />
@@ -101,7 +194,7 @@ export default function OrganizationOpportunities() {
             </button>
           </div>
 
-          {/* Create Form Modal */}
+          {/* Create and edit form */}
           {showCreateForm && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <motion.div
@@ -109,13 +202,22 @@ export default function OrganizationOpportunities() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8"
               >
-                <h2 className="text-2xl font-bold text-slate-800 mb-6">Create New Opportunity</h2>
+                <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                  {editingId ? 'Edit Opportunity' : 'Create New Opportunity'}
+                </h2>
+                <p className="mb-6 text-sm text-slate-600">
+                  {editingId
+                    ? 'Update your draft or rejected posting before submitting it for review.'
+                    : 'Save as a draft first. You can edit it before submitting it for review.'}
+                </p>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Title</label>
                     <input
                       type="text"
                       name="title"
+                      minLength={3}
+                      maxLength={160}
                       value={formData.title}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -126,11 +228,24 @@ export default function OrganizationOpportunities() {
                     <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
                     <textarea
                       name="description"
+                      minLength={20}
+                      maxLength={10000}
                       value={formData.description}
                       onChange={handleChange}
                       rows={3}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                       required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Required skills</label>
+                    <input
+                      type="text"
+                      name="requiredSkills"
+                      value={formData.requiredSkills}
+                      onChange={handleChange}
+                      placeholder="Separate skills with commas"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -139,6 +254,8 @@ export default function OrganizationOpportunities() {
                       <input
                         type="text"
                         name="fieldOfStudy"
+                        minLength={2}
+                        maxLength={160}
                         value={formData.fieldOfStudy}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -159,12 +276,61 @@ export default function OrganizationOpportunities() {
                       </select>
                     </div>
                   </div>
+                  <div>
+                    <div className="mb-2">
+                      <p className="text-sm font-medium text-slate-700">Opportunity image</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Choose a professionally designed image suggested for your {organizationIndustry || 'industry'}.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {getOpportunityImageChoices(organizationIndustry).map((choice) => (
+                        <button
+                          key={choice.id}
+                          type="button"
+                          aria-pressed={formData.imageKey === choice.id}
+                          onClick={() => setFormData((current) => ({ ...current, imageKey: choice.id }))}
+                          className={`overflow-hidden rounded-xl border-2 text-left transition ${
+                            formData.imageKey === choice.id
+                              ? 'border-primary-500 ring-2 ring-primary-100'
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <img src={choice.src} alt="" className="h-20 w-full object-cover" />
+                          <span className="block px-2.5 py-2 text-xs font-medium text-slate-700">
+                            {choice.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-primary-100 bg-primary-50 p-4">
+                    <p className="text-sm font-semibold text-slate-800">
+                      Required applicant verification
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Every applicant must upload either a student ID or biodata as a PDF, JPEG, or PNG file (maximum 1 MB).
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Additional requirements</label>
+                    <textarea
+                      name="additionalRequirements"
+                      maxLength={3000}
+                      value={formData.additionalRequirements}
+                      onChange={handleChange}
+                      rows={2}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">Duration (weeks)</label>
                       <input
                         type="number"
                         name="durationWeeks"
+                        min={1}
+                        max={104}
                         value={formData.durationWeeks}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -176,6 +342,8 @@ export default function OrganizationOpportunities() {
                       <input
                         type="number"
                         name="availableSlots"
+                        min={1}
+                        max={10000}
                         value={formData.availableSlots}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -206,12 +374,24 @@ export default function OrganizationOpportunities() {
                         required
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Country</label>
+                      <input
+                        type="text"
+                        name="country"
+                        value={formData.country}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        required
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Application Deadline</label>
                     <input
                       type="date"
                       name="applicationDeadline"
+                      min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
                       value={formData.applicationDeadline}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -221,16 +401,21 @@ export default function OrganizationOpportunities() {
                   <div className="flex gap-4 pt-4">
                     <button
                       type="button"
-                      onClick={() => setShowCreateForm(false)}
+                      onClick={() => {
+                        setShowCreateForm(false)
+                        setEditingId(null)
+                      }}
+                      disabled={submitting}
                       className="flex-1 py-3 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
+                      disabled={submitting}
                       className="flex-1 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
                     >
-                      Create Draft
+                      {submitting ? 'Saving…' : editingId ? 'Save Changes' : 'Create Draft'}
                     </button>
                   </div>
                 </form>
@@ -278,18 +463,71 @@ export default function OrganizationOpportunities() {
                         {opp.status.replace('_', ' ')}
                       </span>
                     </div>
-                    <div className="mt-4 flex gap-3">
-                      <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">
-                        <Eye size={16} />
-                        View
-                      </button>
-                      {opp.status === 'draft' && (
-                        <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors">
+                    <details className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+                      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-primary-700 transition hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-600 [&::-webkit-details-marker]:hidden">
+                        <Eye size={16} aria-hidden="true" />
+                        View details
+                      </summary>
+                      <div className="grid gap-4 border-t border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <p className="font-semibold text-slate-800">Description</p>
+                          <p className="mt-1 whitespace-pre-line">{opp.description}</p>
+                        </div>
+                        <p><span className="font-semibold text-slate-800">Location:</span> {[opp.location.city, opp.location.state, opp.location.country].filter(Boolean).join(', ')}</p>
+                        <p><span className="font-semibold text-slate-800">Work arrangement:</span> {opp.workArrangement.replace('_', ' ')}</p>
+                        <p><span className="font-semibold text-slate-800">Duration:</span> {opp.durationWeeks} weeks</p>
+                        <p><span className="font-semibold text-slate-800">Available slots:</span> {opp.availableSlots}</p>
+                        <p><span className="font-semibold text-slate-800">Application deadline:</span> {new Date(opp.applicationDeadline).toLocaleDateString()}</p>
+                        {opp.requiredSkills.length > 0 && (
+                          <p><span className="font-semibold text-slate-800">Required skills:</span> {opp.requiredSkills.join(', ')}</p>
+                        )}
+                        {opp.academicRequirements && (
+                          <p className="whitespace-pre-line"><span className="font-semibold text-slate-800">Academic requirements:</span> {opp.academicRequirements}</p>
+                        )}
+                        {opp.requiredDocuments.length > 0 && (
+                          <p><span className="font-semibold text-slate-800">Required documents:</span> {opp.requiredDocuments.join(', ')}</p>
+                        )}
+                        {opp.additionalRequirements && (
+                          <p className="whitespace-pre-line"><span className="font-semibold text-slate-800">Additional requirements:</span> {opp.additionalRequirements}</p>
+                        )}
+                      </div>
+                    </details>
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      {(opp.status === 'draft' || opp.status === 'rejected') && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openEditForm(opp)}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 rounded-xl hover:bg-primary-100 transition-colors"
+                          >
                           <Edit size={16} />
                           Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleSubmitForReview(opp._id)}
+                            className="px-4 py-2 text-sm font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition-colors"
+                          >
+                            Submit for review
+                          </button>
+                        </>
+                      )}
+                      {opp.status === 'published' && (
+                        <button
+                          type="button"
+                          onClick={() => void handleCloseOpportunity(opp._id)}
+                          className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
+                        >
+                          Close applications
                         </button>
                       )}
                     </div>
+                    {opp.status === 'rejected' && opp.reviewNote && (
+                      <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                        <p className="text-sm font-semibold text-red-800">Admin feedback</p>
+                        <p className="mt-1 whitespace-pre-line text-sm text-red-700">{opp.reviewNote}</p>
+                      </div>
+                    )}
                   </motion.div>
                 )
               })}

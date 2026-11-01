@@ -26,6 +26,35 @@ export const openApiDocument = {
         },
       },
     },
+    '/feedback': {
+      post: {
+        summary: 'Send feedback to the platform support inbox',
+        tags: ['Feedback'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['category', 'message'],
+                properties: {
+                  name: { type: 'string', maxLength: 120 },
+                  email: { type: 'string', format: 'email', maxLength: 254 },
+                  category: { type: 'string', enum: ['suggestion', 'issue', 'other'] },
+                  message: { type: 'string', minLength: 10, maxLength: 4000 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '202': { description: 'Feedback email accepted for delivery.' },
+          '400': { description: 'Invalid feedback details.' },
+          '429': { description: 'Feedback submission limit reached.' },
+          '503': { description: 'Feedback email delivery is not configured.' },
+        },
+      },
+    },
     '/auth/register': {
       post: {
         summary: 'Register a student or organization representative account',
@@ -166,9 +195,8 @@ export const openApiDocument = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['actorUserId', 'action', 'targetType', 'targetId'],
+                required: ['action', 'targetType', 'targetId'],
                 properties: {
-                  actorUserId: { type: 'string', description: 'User ID who performed the action' },
                   action: { type: 'string', description: 'Action performed' },
                   targetType: {
                     type: 'string',
@@ -176,6 +204,17 @@ export const openApiDocument = {
                   },
                   targetId: { type: 'string', description: 'Target ID affected' },
                   details: { type: 'object', description: 'Additional details', default: {} },
+                },
+              },
+              '/administration/activity': {
+                get: {
+                  summary: 'Get recent platform administration activity',
+                  tags: ['Administration'],
+                  security: [{ bearerAuth: [] }],
+                  responses: {
+                    '200': { description: 'Recent account and domain review events.' },
+                    '401': { description: 'Administrator role required.' },
+                  },
                 },
               },
             },
@@ -227,40 +266,6 @@ export const openApiDocument = {
           '400': { description: 'Invalid status value.' },
           '401': { description: 'Administrator role required.' },
           '404': { description: 'User not found.' },
-        },
-      },
-    },
-    '/administration/organizations/:organizationId/verification': {
-      patch: {
-        summary: 'Update organization verification status',
-        tags: ['Administration'],
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'organizationId', in: 'path', required: true, schema: { type: 'string' } },
-        ],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['verificationStatus'],
-                properties: {
-                  verificationStatus: {
-                    type: 'string',
-                    enum: ['verified', 'rejected', 'suspended'],
-                  },
-                  notes: { type: 'string', description: 'Reason for rejection or approval' },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          '200': { description: 'Organization verification status updated.' },
-          '400': { description: 'Invalid verification status.' },
-          '401': { description: 'Administrator role required.' },
-          '404': { description: 'Organization not found.' },
         },
       },
     },
@@ -321,27 +326,6 @@ export const openApiDocument = {
       },
     },
     '/applications': {
-      post: {
-        summary: 'Submit an application for a published opportunity',
-        tags: ['Applications'],
-        security: [{ bearerAuth: [] }],
-        responses: {
-          '201': { description: 'Application submitted successfully.' },
-          '400': { description: 'Application deadline passed or opportunity not available.' },
-          '403': { description: 'Organization not verified or student already applied.' },
-          '404': { description: 'Opportunity not found.' },
-        },
-      },
-    },
-    '/applications/my': {
-      get: {
-        summary: 'Get the authenticated student applications',
-        tags: ['Applications'],
-        security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Student applications.' } },
-      },
-    },
-    '/applications/admin': {
       get: {
         summary: 'List applications for administrator review',
         tags: ['Administration'],
@@ -350,7 +334,6 @@ export const openApiDocument = {
           {
             name: 'status',
             in: 'query',
-            required: false,
             schema: {
               type: 'string',
               enum: [
@@ -365,11 +348,54 @@ export const openApiDocument = {
               ],
             },
           },
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100 } },
         ],
         responses: {
-          '200': { description: 'Applications matching the status filter.' },
+          '200': { description: 'Paginated applications matching the status filter.' },
+          '400': { description: 'Invalid filter or pagination value.' },
           '401': { description: 'Administrator role required.' },
         },
+      },
+      post: {
+        summary: 'Submit an application for a published opportunity',
+        tags: ['Applications'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['opportunityId', 'studentDocumentIds'],
+                properties: {
+                  opportunityId: { type: 'string' },
+                  studentDocumentIds: {
+                    type: 'array',
+                    minItems: 1,
+                    maxItems: 1,
+                    items: { type: 'string' },
+                    description: 'One uploaded student ID or biodata document.',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Application submitted successfully.' },
+          '400': { description: 'Application deadline passed or opportunity not available.' },
+          '403': { description: 'Organization not verified or student already applied.' },
+          '404': { description: 'Opportunity not found.' },
+        },
+      },
+    },
+    '/applications/my': {
+      get: {
+        summary: 'Get the authenticated student applications',
+        tags: ['Applications'],
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'Student applications.' } },
       },
     },
     '/applications/:applicationId/status': {
@@ -840,9 +866,62 @@ export const openApiDocument = {
         },
       },
     },
-    '/documents/student/upload': {
+    '/documents/student/me': {
+      get: {
+        summary: "List the authenticated student's saved ID and biodata documents",
+        tags: ['Documents'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Student verification documents available for applications.' },
+          '401': { description: 'Authentication required.' },
+          '403': { description: 'Student role required.' },
+        },
+      },
+    },
+    '/documents/student/profile': {
       post: {
-        summary: 'Upload a student document (CV, supporting files)',
+        summary: 'Save one student ID or biodata document to the student profile',
+        tags: ['Documents'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['documentType', 'file'],
+                properties: {
+                  documentType: { type: 'string', enum: ['student_id', 'biodata'] },
+                  file: { type: 'string', format: 'binary' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Profile verification document uploaded.' },
+          '400': { description: 'Invalid file or document type.' },
+          '409': { description: 'A profile verification document is already saved.' },
+        },
+      },
+    },
+    '/documents/student/profile/:documentId': {
+      delete: {
+        summary: 'Remove a student verification document from profile reuse',
+        tags: ['Documents'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: {
+          '200': { description: 'Document removed; application-linked documents are retained.' },
+          '404': { description: 'Document not found.' },
+        },
+      },
+    },
+    '/documents/student': {
+      post: {
+        summary: 'Upload a student ID or biodata for opportunity application verification',
         tags: ['Documents'],
         security: [{ bearerAuth: [] }],
         requestBody: {
@@ -855,7 +934,7 @@ export const openApiDocument = {
                 properties: {
                   documentType: {
                     type: 'string',
-                    enum: ['cv', 'other'],
+                    enum: ['student_id', 'biodata', 'cv'],
                   },
                   file: { type: 'string', format: 'binary' },
                 },
@@ -865,39 +944,24 @@ export const openApiDocument = {
         },
         responses: {
           '201': { description: 'Document uploaded successfully.' },
-          '400': { description: 'Invalid document or verification state.' },
-          '413': { description: 'Document exceeds 5 MB.' },
+          '400': { description: 'Invalid file or student ID/biodata exceeds 1 MB.' },
+          '413': { description: 'Document exceeds the 5 MB upload limit.' },
         },
       },
     },
-    '/documents/student/:documentId/download': {
+    '/documents/applications/:applicationId/student-documents/:documentId/download': {
       get: {
-        summary: 'Download a student document',
+        summary: 'Download a student verification document attached to an organization application',
         tags: ['Documents'],
         security: [{ bearerAuth: [] }],
         parameters: [
+          { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
           { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
         ],
         responses: {
           '200': { description: 'Document file.' },
           '401': { description: 'Authentication required.' },
-          '403': { description: 'Student role required.' },
-          '404': { description: 'Document not found.' },
-        },
-      },
-    },
-    '/documents/student/:documentId': {
-      delete: {
-        summary: 'Delete a student document',
-        tags: ['Documents'],
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'documentId', in: 'path', required: true, schema: { type: 'string' } },
-        ],
-        responses: {
-          '204': { description: 'Document deleted.' },
-          '401': { description: 'Authentication required.' },
-          '403': { description: 'Student role required.' },
+          '403': { description: 'Organization representative role required.' },
           '404': { description: 'Document not found.' },
         },
       },

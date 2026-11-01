@@ -1,26 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { authApi } from '../services/api'
-
-export interface User {
-  id: string
-  email: string
-  role: 'student' | 'organization_representative' | 'administrator'
-  status: 'active' | 'suspended'
-  emailVerifiedAt?: string | null
-}
-
-export interface StudentProfile {
-  _id: string
-  fullName: string
-  phoneNumber?: string
-  institution?: string
-  department?: string
-  fieldOfStudy?: string
-  currentLevel?: string
-  expectedDurationWeeks?: number
-  preferredLocations?: string[]
-  skills?: string[]
-}
+import type { RegisterData, StudentProfile, StudentProfileInput, User } from '../types/domain'
 
 interface AuthContextType {
   user: User | null
@@ -31,25 +11,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<User>
   register: (data: RegisterData) => Promise<void>
   logout: () => void
-  updateProfile: (data: Partial<StudentProfile>) => Promise<void>
-}
-
-interface RegisterData {
-  email: string
-  password: string
-  confirmPassword: string
-  role: 'student' | 'organization_representative'
-  student?: {
-    fullName: string
-    phoneNumber?: string
-    institution?: string
-    department?: string
-    fieldOfStudy?: string
-    currentLevel?: string
-    expectedDurationWeeks?: number
-    preferredLocations?: string[]
-    skills?: string[]
-  }
+  updateProfile: (data: Partial<StudentProfileInput>) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -105,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStudentProfile(null)
   }
 
-  const updateProfile = async (data: Partial<StudentProfile>) => {
+  const updateProfile = async (data: Partial<StudentProfileInput>) => {
     if (!token) return
     const response = await authApi.updateStudentProfile(data)
     setStudentProfile(response)

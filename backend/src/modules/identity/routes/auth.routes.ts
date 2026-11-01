@@ -1,5 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import {
+  loginRateLimit,
+  passwordResetRateLimit,
+  registrationRateLimit,
+} from '../../../middleware/rate-limit.js';
 import { validateBody } from '../../../middleware/validate-body.js';
 import {
   completePasswordReset,
@@ -16,19 +21,19 @@ import { registerSchema } from '../validations/auth.validation.js';
 
 export const authRouter = Router();
 
-authRouter.post('/register', validateBody(registerSchema), register);
+authRouter.post('/register', registrationRateLimit, validateBody(registerSchema), register);
 
-authRouter.post('/login', signIn);
+authRouter.post('/login', loginRateLimit, signIn);
 
 authRouter.post('/logout', requireAuthentication, signOut);
 
 authRouter.get('/me', requireAuthentication, currentUser);
 
-authRouter.post('/password/forgot', forgotPassword);
+authRouter.post('/password/forgot', passwordResetRateLimit, forgotPassword);
 
-authRouter.post('/password/reset', completePasswordReset);
+authRouter.post('/password/reset', passwordResetRateLimit, completePasswordReset);
 
-authRouter.post('/password/reset/:token', completePasswordReset);
+authRouter.post('/password/reset/:token', passwordResetRateLimit, completePasswordReset);
 
 authRouter.put('/password', requireAuthentication, updatePassword);
 
@@ -42,6 +47,7 @@ authRouter.patch(
         fullName: z.string().trim().min(2).max(120).optional(),
         phoneNumber: z.string().trim().max(30).nullable().optional(),
         institution: z.string().trim().max(160).nullable().optional(),
+        matricNumber: z.string().trim().max(80).nullable().optional(),
         department: z.string().trim().max(160).nullable().optional(),
         fieldOfStudy: z.string().trim().max(160).nullable().optional(),
         currentLevel: z.string().trim().max(40).nullable().optional(),

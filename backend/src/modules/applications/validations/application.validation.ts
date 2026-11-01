@@ -13,6 +13,13 @@ export const applicationStatusSchema = z.enum([
 
 export type ApplicationStatus = z.infer<typeof applicationStatusSchema>;
 
+export const createApplicationSchema = z
+  .object({
+    opportunityId: z.string().min(1).max(64),
+    studentDocumentIds: z.array(z.string().min(1).max(64)).length(1),
+  })
+  .strict();
+
 export const updateApplicationStatusSchema = z
   .object({
     status: applicationStatusSchema,

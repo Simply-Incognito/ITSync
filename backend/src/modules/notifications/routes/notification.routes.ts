@@ -46,14 +46,21 @@ notificationRouter.get('/unread-count', ...studentAccess, async (request, respon
 });
 
 notificationRouter.patch('/:notificationId/read', ...studentAccess, async (request, response) => {
-  const notificationId = new Types.ObjectId(
-    routeParam(request, 'notificationId', {
-      code: 'NOTIFICATION_NOT_FOUND',
-      message: 'Notification was not found.',
-    }),
+  const notificationId = routeParam(request, 'notificationId', {
+    code: 'NOTIFICATION_NOT_FOUND',
+    message: 'Notification was not found.',
+  });
+
+  if (!Types.ObjectId.isValid(notificationId)) {
+    throw new AppError('Notification was not found.', 404, 'NOTIFICATION_NOT_FOUND');
+  }
+
+  const notification = await markNotificationAsRead(
+    new Types.ObjectId(notificationId),
+    new Types.ObjectId(requireIdentity(request).id),
+    'student',
   );
 
-  const notification = await markNotificationAsRead(notificationId);
   response.json({ notification });
 });
 

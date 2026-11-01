@@ -6,11 +6,12 @@ import { Organization } from '../../organizations/models/organization.model.js';
 import { Opportunity } from '../../opportunities/models/opportunity.model.js';
 import { Application, type ApplicationStatus } from '../models/application.model.js';
 import { ApplicationReviewEvent } from '../models/application-review-event.model.js';
+import { assertStudentVerificationDocuments } from '../../documents/services/document.service.js';
 
 export interface CreateApplicationInput {
   studentId: Types.ObjectId;
   opportunityId: Types.ObjectId;
-  studentDocumentIds?: Types.ObjectId[];
+  studentDocumentIds: Types.ObjectId[];
 }
 
 export interface ApplicationFilters {
@@ -72,6 +73,7 @@ export async function createApplication(
   // Check if student exists and has a profile
   const student = await Student.findOne({ userId: studentId }).lean();
   if (!student) throw new AppError('Student profile not found.', 404, 'STUDENT_PROFILE_NOT_FOUND');
+  await assertStudentVerificationDocuments(studentDocumentIds, new Types.ObjectId(studentId));
 
   // Check if opportunity exists and is available
   const opportunity = await Opportunity.findById(opportunityId).lean();
@@ -125,7 +127,7 @@ export async function createApplication(
     studentId: student.userId,
     opportunityId,
     status: 'submitted',
-    documents: studentDocumentIds || [],
+    documents: studentDocumentIds,
   });
 
   await application.save();
@@ -194,7 +196,13 @@ export async function listApplications(
   const [applications, total] = await Promise.all([
     Application.find(filter)
       .populate('studentId', 'fullName email institution')
-      .populate('opportunityId', 'title organizationId')
+      .populate({
+        path: 'opportunityId',
+        select:
+          'title description fieldOfStudy requiredSkills location workArrangement durationWeeks availableSlots applicationDeadline requiredDocuments status createdAt organizationId academicRequirements additionalRequirements',
+        populate: { path: 'organizationId', select: 'legalName tradingName' },
+      })
+      .populate('documents', 'documentType originalName contentType byteSize')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

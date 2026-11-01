@@ -1,4 +1,5 @@
 import { env } from '../../../config/env.js';
+import { logger } from '../../../config/logger.js';
 import { AppError } from '../../../errors/app-error.js';
 import { AuthToken } from '../models/auth-token.model.js';
 import { Student, type StudentProfileInput } from '../models/student.model.js';
@@ -12,8 +13,11 @@ const sessionLifetimeMs = 7 * 24 * 60 * 60 * 1000;
 const resetLifetimeMs = 10 * 60 * 1000;
 
 export function buildPasswordResetLink(token: string): string {
-  const baseUrl = env.WEB_APP_URL.endsWith('/') ? env.WEB_APP_URL.slice(0, -1) : env.WEB_APP_URL;
-  return new URL(`/api/v1/auth/password/reset/${encodeURIComponent(token)}`, baseUrl).toString();
+  // The link must land on the web app, not on the POST-only API endpoint.
+  const baseUrl = env.WEB_APP_URL.replace(/\/+$/, '');
+  const url = new URL('/reset-password', baseUrl);
+  url.searchParams.set('token', token);
+  return url.toString();
 }
 
 function escapeHtml(value: string): string {
@@ -228,13 +232,16 @@ export async function requestPasswordReset(email: string): Promise<{ resetToken?
         error instanceof Error
           ? (error as Error & { code?: string; responseCode?: number; command?: string })
           : undefined;
-      console.error('Password recovery email delivery failed.', {
-        code: smtpError?.code,
-        responseCode: smtpError?.responseCode,
-        command: smtpError?.command,
-        host: env.SMTP_HOST,
-        port: env.SMTP_PORT,
-      });
+      logger.error(
+        {
+          code: smtpError?.code,
+          responseCode: smtpError?.responseCode,
+          command: smtpError?.command,
+          host: env.SMTP_HOST,
+          port: env.SMTP_PORT,
+        },
+        'Password recovery email delivery failed',
+      );
     }
     return {};
   }

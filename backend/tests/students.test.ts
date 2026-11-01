@@ -26,6 +26,7 @@ const validProfile = {
   fullName: 'John Doe',
   phoneNumber: '+2341234567890',
   institution: 'University of Lagos',
+  matricNumber: 'ENG/2022/0123',
   department: 'Computer Science',
   fieldOfStudy: 'Computer Science',
   currentLevel: '300',

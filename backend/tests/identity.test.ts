@@ -17,6 +17,7 @@ import {
   buildPasswordResetEmail,
   buildPasswordResetLink,
 } from '../src/modules/identity/services/auth.service.js';
+import { registerSchema } from '../src/modules/identity/validations/auth.validation.js';
 import { hashPassword, verifyPassword } from '../src/modules/identity/utils/password.js';
 
 const app = createApp();
@@ -73,6 +74,48 @@ describe('identity routes', () => {
     expect(missingConfirmation.body.error.code).toBe('VALIDATION_ERROR');
     expect(mismatchedConfirmation.status).toBe(400);
     expect(mismatchedConfirmation.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('accepts organization registration details collected by the signup form', () => {
+    const registration = {
+      email: 'organization@example.com',
+      password: 'a-strong-password-123',
+      confirmPassword: 'a-strong-password-123',
+      role: 'organization_representative',
+      organization: {
+        legalName: 'Example Organization',
+        registrationNumber: 'RC123456',
+        industry: 'Technology',
+        description: 'An organization providing technology services.',
+        representativeName: 'Jane Smith',
+        representativeTitle: 'HR Manager',
+        address: {
+          street: '12 Example Street',
+          city: 'Lagos',
+          state: 'Lagos',
+          country: 'Nigeria',
+        },
+      },
+    };
+
+    const parsedRegistration = registerSchema.safeParse(registration);
+    expect(parsedRegistration.success).toBe(true);
+    if (parsedRegistration.success) {
+      expect(parsedRegistration.data.organization?.registrationCountry).toBe('NG');
+    }
+    expect(
+      registerSchema.safeParse({
+        ...registration,
+        organization: {
+          ...registration.organization,
+          address: {
+            city: 'Lagos',
+            state: 'Lagos',
+            country: 'Nigeria',
+          },
+        },
+      }).success,
+    ).toBe(false);
   });
 
   it('allows every registered account role to log in through the shared endpoint', async () => {
@@ -145,11 +188,14 @@ describe('password reset links', () => {
     const link = buildPasswordResetLink(token);
     const email = buildPasswordResetEmail('student@example.com', link);
 
-    expect(link).toBe('http://localhost:3000/api/v1/auth/password/reset/reset-token-123');
+    const url = new URL(link);
+
+    expect(url.pathname).toBe('/reset-password');
+    expect(url.searchParams.get('token')).toBe(token);
     expect(email.subject).toContain('Reset your iSIWES password');
-    expect(email.text).toContain('/api/v1/auth/password/reset/reset-token-123');
+    expect(email.text).toContain('/reset-password?token=reset-token-123');
     expect(email.text).toContain('10 minutes');
-    expect(email.html).toContain('/auth/password/reset/reset-token-123');
+    expect(email.html).toContain('/reset-password?token=reset-token-123');
     expect(email.html).toContain('10 minutes');
   });
 });

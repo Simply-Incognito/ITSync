@@ -13,9 +13,9 @@ Draft -> Pending Review -> Published -> Closed
 						  +-> Pending Review
 ```
 
-Only representatives of currently verified organizations can create or manage opportunities. Representatives can edit draft or rejected opportunities, submit them for review, and close published opportunities. Administrators can approve or reject pending opportunities and suspend published opportunities. State transitions and immutable moderation events are committed in MongoDB transactions.
+Only representatives of currently verified organizations can create or manage opportunities. Organizations save a posting as a draft, can edit drafts and rejected postings, and explicitly submit them for review. Administrators approve or reject pending postings; approval publishes the listing, while rejection includes feedback the organization can use before editing and resubmitting. Administrators can also suspend published opportunities, and organizations can close their published postings. State transitions and immutable moderation events are committed in MongoDB transactions.
 
-Public listing and detail endpoints expose only published opportunities with future application deadlines and currently verified organizations. The discovery endpoint supports search by title, description, or field of study, and filtering by field of study, industry, location, duration, and work arrangement. Results are paginated.
+Public listing and detail endpoints expose only published opportunities with future application deadlines and currently verified organizations. Students can view the full listing and apply; the application service requires a student profile, prevents duplicate applications, and reserves an available slot. The discovery endpoint supports search by title, description, or field of study, and filtering by field of study, industry, location, duration, and work arrangement. Results are paginated.
 
 ## API
 
