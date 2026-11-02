@@ -70,7 +70,7 @@ Undergraduate and other eligible tertiary students seeking SIWES/Industrial Trai
 
 **Primary needs**
 
-- Discover suitable opportunities.
+- Discover suitable SIWES opportunities.
 - Search by field of study and location.
 - Understand organization and opportunity requirements.
 - Apply without unnecessary friction.
