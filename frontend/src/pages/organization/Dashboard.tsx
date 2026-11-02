@@ -125,15 +125,17 @@ export default function OrganizationDashboard() {
                 <h3 className="font-semibold text-yellow-800">Verification Required</h3>
                 <p className="text-sm text-yellow-700 mt-1">
                   {organization?.verificationStatus === 'pending'
-                    ? 'Your organization is under review. You will be notified once verified.'
-                    : 'Please complete verification to start posting opportunities.'}
+                    ? 'Your account is active and your organization is under review. You can continue using the portal while we review your documents.'
+                    : organization?.verificationStatus === 'suspended'
+                      ? 'Your organization account is active, but posting is unavailable while it is suspended. Please contact support for help.'
+                      : 'Your account is active and you can use the portal. Complete verification to unlock opportunity posting.'}
                 </p>
               </div>
               <Link
                 to="/organization/verification"
                 className="px-4 py-2 bg-yellow-600 text-white font-semibold rounded-xl hover:bg-yellow-700 transition-colors"
               >
-                {organization.verificationStatus === 'pending'
+                {organization.verificationStatus === 'pending' || organization.verificationStatus === 'suspended'
                   ? 'View Verification Status'
                   : 'Complete Verification'}
               </Link>

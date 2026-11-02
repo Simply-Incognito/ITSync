@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Plus, Briefcase, Clock, CheckCircle, XCircle, Edit, Eye, type LucideIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { opportunityApi, organizationApi } from '../../services/api'
-import type { Opportunity, OpportunityInput, WorkArrangement } from '../../types/domain'
+import type { Opportunity, OpportunityInput, Organization, WorkArrangement } from '../../types/domain'
 import { getErrorMessage } from '../../utils/errors'
 import { getOpportunityImageChoices } from '../../utils/opportunity-images'
 import { notify } from '../../lib/notify'
@@ -47,6 +48,7 @@ export default function OrganizationOpportunities() {
   const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState<OpportunityFormState>(emptyForm)
   const [organizationIndustry, setOrganizationIndustry] = useState('')
+  const [organization, setOrganization] = useState<Organization | null>(null)
 
   useEffect(() => {
     fetchOpportunities()
@@ -54,12 +56,18 @@ export default function OrganizationOpportunities() {
 
   const fetchOpportunities = async () => {
     try {
-      const [response, organizationResponse] = await Promise.all([
-        opportunityApi.listMy(),
-        organizationApi.getProfile(),
-      ])
+      const organizationResponse = await organizationApi.getProfile()
+      const currentOrganization = organizationResponse.organization
+      setOrganization(currentOrganization)
+      setOrganizationIndustry(currentOrganization?.industry ?? '')
+
+      if (currentOrganization?.verificationStatus !== 'verified') {
+        setOpportunities([])
+        return
+      }
+
+      const response = await opportunityApi.listMy()
       setOpportunities(response.opportunities)
-      setOrganizationIndustry(organizationResponse.organization?.industry ?? '')
     } catch (error) {
       notify.error(getErrorMessage(error, 'Unable to load opportunities.'))
     } finally {
@@ -185,14 +193,45 @@ export default function OrganizationOpportunities() {
               <h1 className="text-3xl font-bold text-slate-800">My Opportunities</h1>
               <p className="text-slate-600 mt-2">Manage your SIWES postings</p>
             </div>
-            <button
-              onClick={openCreateForm}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
-            >
-              <Plus size={20} />
-              New Opportunity
-            </button>
+            {organization?.verificationStatus === 'verified' ? (
+              <button
+                onClick={openCreateForm}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors"
+              >
+                <Plus size={20} />
+                New Opportunity
+              </button>
+            ) : null}
           </div>
+
+          {organization && organization.verificationStatus !== 'verified' && (
+            <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="font-semibold text-yellow-900">
+                  {organization.verificationStatus === 'pending'
+                    ? 'Your verification is under review'
+                    : organization.verificationStatus === 'suspended'
+                      ? 'Your organization is suspended'
+                      : 'Your account is active'}
+                </h2>
+                <p className="mt-1 text-sm text-yellow-800">
+                  {organization.verificationStatus === 'pending'
+                    ? 'You can continue using the portal while your documents are reviewed.'
+                    : organization.verificationStatus === 'suspended'
+                      ? 'Please contact support for help with your organization status.'
+                      : 'Complete organization verification to unlock opportunity posting. You can continue using the portal in the meantime.'}
+                </p>
+              </div>
+              <Link
+                to="/organization/verification"
+                className="inline-flex shrink-0 items-center justify-center rounded-xl bg-yellow-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-yellow-700"
+              >
+                {organization.verificationStatus === 'pending' || organization.verificationStatus === 'suspended'
+                  ? 'View Verification Status'
+                  : 'Complete Verification'}
+              </Link>
+            </div>
+          )}
 
           {/* Create and edit form */}
           {showCreateForm && (
