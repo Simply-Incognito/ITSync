@@ -37,6 +37,15 @@ const tabs: { id: OpportunityTab; label: string }[] = [
   { id: 'all', label: 'All Opportunities' },
 ]
 
+function getSavedOpportunityStorageKey(userId: string) {
+  return `itsync:saved-opportunities:${userId}`
+}
+
+function readSavedOpportunityIds(userId: string | undefined) {
+  if (!userId) return new Set<string>()
+  return new Set(localStorage.getItem(getSavedOpportunityStorageKey(userId))?.split(',').filter(Boolean) ?? [])
+}
+
 function getOrganizationInitials(name: string) {
   return name
     .split(/\s+/)
@@ -198,7 +207,7 @@ function getRecommendedOpportunities(opportunities: Opportunity[], profile: Stud
 }
 
 export default function StudentOpportunities() {
-  const { studentProfile } = useAuth()
+  const { user, studentProfile } = useAuth()
   const shouldReduceMotion = useReducedMotion()
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
@@ -207,9 +216,12 @@ export default function StudentOpportunities() {
   const [appliedOpportunityIds, setAppliedOpportunityIds] = useState<Set<string>>(new Set())
   const [appliedOpportunityCount, setAppliedOpportunityCount] = useState(0)
   const [appliedOpportunities, setAppliedOpportunities] = useState<Opportunity[]>([])
-  const [savedOpportunityIds, setSavedOpportunityIds] = useState(
-    () => new Set(localStorage.getItem('itsync:saved-opportunities')?.split(',').filter(Boolean) ?? []),
-  )
+  const [savedOpportunities, setSavedOpportunities] = useState(() => ({
+    userId: user?.id,
+    ids: readSavedOpportunityIds(user?.id),
+  }))
+  const savedOpportunityIds =
+    savedOpportunities.userId === user?.id ? savedOpportunities.ids : new Set<string>()
   const [verificationFile, setVerificationFile] = useState<File | null>(null)
   const [verificationDocuments, setVerificationDocuments] = useState<StudentVerificationDocument[]>([])
   const [selectedVerificationDocumentId, setSelectedVerificationDocumentId] = useState('')
@@ -224,6 +236,12 @@ export default function StudentOpportunities() {
     location: '',
     workArrangement: '',
   })
+
+  useEffect(() => {
+    if (savedOpportunities.userId !== user?.id) {
+      setSavedOpportunities({ userId: user?.id, ids: readSavedOpportunityIds(user?.id) })
+    }
+  }, [savedOpportunities.userId, user?.id])
 
   useEffect(() => {
     void fetchOpportunities()
@@ -373,8 +391,9 @@ export default function StudentOpportunities() {
     if (isSaving) next.add(opportunityId)
     else next.delete(opportunityId)
 
-    setSavedOpportunityIds(next)
-    localStorage.setItem('itsync:saved-opportunities', [...next].join(','))
+    if (!user) return
+    setSavedOpportunities({ userId: user.id, ids: next })
+    localStorage.setItem(getSavedOpportunityStorageKey(user.id), [...next].join(','))
     notify.success(isSaving ? 'Saved to your list.' : 'Removed from saved opportunities.')
   }
 
