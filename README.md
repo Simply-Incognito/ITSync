@@ -1,6 +1,6 @@
 # ITSync Platform — Product Requirements Document
 
-**Version:** 1.0  
+**Version:** 1.0
 **Created:** September 26, 2026  
 **Architecture:** Modular Monolith using Clean Architecture  
 **Technology:** React, TypeScript, Node.js, Express, Mongoose, MongoDB
@@ -9,7 +9,7 @@
 
 ## 1. Product Overview
 
-ITSync is a web-based platform intended to make it easier for Nigerian tertiary students to discover and apply for suitable SIWES/Industrial Training opportunities.
+ITSync is a platform intended to make it easier for Nigerian tertiary students to discover and apply for suitable SIWES/Industrial Training opportunities.
 
 The platform will provide a centralized marketplace where students can discover placement opportunities based on factors such as field of study, location, duration, and requirements.
 
