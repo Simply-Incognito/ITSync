@@ -76,7 +76,7 @@ Undergraduate and other eligible tertiary students seeking SIWES/Industrial Trai
 - Apply without unnecessary friction.
 - Track applications.
 - Receive notifications about application progress.
-- Identify legitimate organizations.
+- Identify and verify legitimate organizations.
 
 ### 5.2 Organization Representatives
 
