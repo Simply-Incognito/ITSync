@@ -4,12 +4,12 @@ import Navbar from './Navbar'
 import Footer from './Footer'
 import FeedbackWidget from './FeedbackWidget'
 import AppToaster from './AppToaster'
-import { StudentNavigationProvider } from './student/StudentNavigationContext'
+import { WorkspaceNavigationProvider } from './WorkspaceNavigationContext'
 
 export default function Layout() {
   const { isLoading } = useAuth()
   const { pathname } = useLocation()
-  const isStudentWorkspace = pathname.startsWith('/student/')
+  const isWorkspace = pathname.startsWith('/student/') || pathname.startsWith('/organization/')
 
   if (isLoading) {
     return (
@@ -20,16 +20,16 @@ export default function Layout() {
   }
 
   return (
-    <StudentNavigationProvider>
+    <WorkspaceNavigationProvider>
       <div className="min-h-screen flex flex-col bg-slate-50">
         <Navbar />
         <main className="min-w-0 flex-1">
           <Outlet />
         </main>
-        {!isStudentWorkspace && <Footer />}
+        {!isWorkspace && <Footer />}
         <FeedbackWidget />
         <AppToaster />
       </div>
-    </StudentNavigationProvider>
+    </WorkspaceNavigationProvider>
   )
 }
