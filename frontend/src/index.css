@@ -412,7 +412,7 @@ html[data-theme="dark"] body {
   color: var(--text);
 }
 
-html[data-theme="dark"] .student-layout {
+html[data-theme="dark"] .workspace-layout {
   background-color: #111a14;
 }
 
