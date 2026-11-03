@@ -7,9 +7,11 @@ import {
   CalendarDays,
   Check,
   Clock3,
+  FileText,
   MapPin,
   Search,
   SlidersHorizontal,
+  Trash2,
   Users,
   X,
 } from 'lucide-react'
@@ -226,9 +228,13 @@ export default function StudentOpportunities() {
     savedOpportunities.userId === user?.id ? savedOpportunities.ids : new Set<string>()
   const [verificationFile, setVerificationFile] = useState<File | null>(null)
   const [verificationDocuments, setVerificationDocuments] = useState<StudentVerificationDocument[]>([])
+  const [profileVerificationDocumentIds, setProfileVerificationDocumentIds] = useState<Set<string>>(
+    new Set(),
+  )
   const [selectedVerificationDocumentId, setSelectedVerificationDocumentId] = useState('')
   const [verificationDocumentType, setVerificationDocumentType] =
     useState<StudentVerificationDocumentType>('student_id')
+  const [removingVerificationDocumentId, setRemovingVerificationDocumentId] = useState('')
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<OpportunityTab>('for-you')
   const [currentPage, setCurrentPage] = useState(1)
@@ -352,9 +358,44 @@ export default function StudentOpportunities() {
     try {
       const { documents } = await studentDocumentApi.listMy()
       setVerificationDocuments(documents)
+      setProfileVerificationDocumentIds(new Set(documents.map((document) => document.documentId)))
       setSelectedVerificationDocumentId((current) => current || documents[0]?.documentId || '')
     } catch (error) {
       notify.error(error instanceof Error ? error.message : 'Unable to load your verification documents.')
+    }
+  }
+
+  const getPreferredVerificationDocument = () =>
+    verificationDocuments.find((document) =>
+      profileVerificationDocumentIds.has(document.documentId),
+    ) || verificationDocuments[0]
+
+  const removeVerificationDocument = async (document: StudentVerificationDocument) => {
+    setRemovingVerificationDocumentId(document.documentId)
+    try {
+      const { retainedForApplications } = await studentDocumentApi.removeProfileDocument(
+        document.documentId,
+      )
+      setVerificationDocuments((current) =>
+        current.filter((savedDocument) => savedDocument.documentId !== document.documentId),
+      )
+      setProfileVerificationDocumentIds((current) => {
+        const next = new Set(current)
+        next.delete(document.documentId)
+        return next
+      })
+      setSelectedVerificationDocumentId((current) =>
+        current === document.documentId ? '' : current,
+      )
+      notify.success(
+        retainedForApplications
+          ? 'Removed from your profile. Existing applications will keep their document.'
+          : 'Verification document removed.',
+      )
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : 'Unable to remove the saved document.')
+    } finally {
+      setRemovingVerificationDocumentId('')
     }
   }
 
@@ -471,8 +512,9 @@ export default function StudentOpportunities() {
   const openDetails = (opportunity: Opportunity) => {
     setSelectedOpportunity(opportunity)
     setVerificationFile(null)
-    setVerificationDocumentType('student_id')
-    setSelectedVerificationDocumentId(verificationDocuments[0]?.documentId || '')
+    const savedDocument = getPreferredVerificationDocument()
+    setVerificationDocumentType(savedDocument?.documentType || 'student_id')
+    setSelectedVerificationDocumentId(savedDocument?.documentId || '')
   }
 
   return (
@@ -972,31 +1014,52 @@ export default function StudentOpportunities() {
                     <div className="mt-6 rounded-xl border border-primary-100 bg-primary-50/60 p-4">
                       <p className="font-semibold text-slate-800">Verification document</p>
                       <p className="mt-1 text-sm text-slate-600">
-                        Use a document saved to your profile, or upload a different one for this application. PDF, JPEG, or PNG files up to 1 MB are accepted.
+                        Continue with your saved document or remove it and choose a replacement. PDF, JPEG, or PNG files up to 1 MB are accepted.
                       </p>
-                      {verificationDocuments.length > 0 && (
-                        <label className="mt-3 block text-sm font-medium text-slate-700">
-                          Saved documents
-                          <select
-                            value={verificationFile ? '' : selectedVerificationDocumentId}
-                            onChange={(event) => {
-                              setSelectedVerificationDocumentId(event.target.value)
-                              setVerificationFile(null)
-                            }}
-                            className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
+                      {verificationDocuments
+                        .filter((document) =>
+                          profileVerificationDocumentIds.has(document.documentId),
+                        )
+                        .map((document) => (
+                        <div key={document.documentId} className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-primary-200 bg-white p-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <FileText size={18} className="shrink-0 text-primary-700" aria-hidden="true" />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-slate-800">{document.originalName}</p>
+                              <p className="text-xs text-slate-500">
+                                {document.documentType === 'student_id' ? 'Student ID' : 'Biodata'} · Saved verification document
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            disabled={removingVerificationDocumentId === document.documentId}
+                            onClick={() => void removeVerificationDocument(document)}
+                            className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
                           >
-                            <option value="">Choose a saved document</option>
-                            {verificationDocuments.map((document) => (
-                              <option key={document.documentId} value={document.documentId}>
-                                {document.documentType === 'student_id' ? 'Student ID' : 'Biodata'} — {document.originalName}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
+                            <Trash2 size={14} aria-hidden="true" />
+                            {removingVerificationDocumentId === document.documentId ? 'Removing…' : 'Remove'}
+                          </button>
+                        </div>
+                        ))}
+                      {verificationDocuments
+                        .filter(
+                          (document) =>
+                            document.documentId === selectedVerificationDocumentId &&
+                            !profileVerificationDocumentIds.has(document.documentId),
+                        )
+                        .map((document) => (
+                          <div key={document.documentId} className="mt-3 flex items-center gap-3 rounded-lg border border-primary-200 bg-white p-3">
+                            <FileText size={18} className="shrink-0 text-primary-700" aria-hidden="true" />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-slate-800">{document.originalName}</p>
+                              <p className="text-xs text-slate-500">Previously uploaded application document</p>
+                            </div>
+                          </div>
+                        ))}
                       <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,180px)_1fr]">
                         <label className="block text-sm font-medium text-slate-700">
-                          {verificationDocuments.length ? 'Replacement type' : 'Document type'}
+                          Document type
                           <select
                             value={verificationDocumentType}
                             onChange={(event) =>
@@ -1011,7 +1074,7 @@ export default function StudentOpportunities() {
                           </select>
                         </label>
                         <label className="block text-sm font-medium text-slate-700">
-                          {verificationDocuments.length ? 'Or upload a different document' : 'Choose file'}
+                          {verificationFile ? 'Replacement document' : 'Upload a different document'}
                           <input
                             key={verificationFile?.name || 'empty-verification-file'}
                             type="file"
@@ -1022,21 +1085,47 @@ export default function StudentOpportunities() {
                                 notify.error('The verification document must be no larger than 1 MB.')
                                 event.target.value = ''
                                 setVerificationFile(null)
+                                const savedDocument = getPreferredVerificationDocument()
+                                setSelectedVerificationDocumentId(savedDocument?.documentId || '')
                                 return
                               }
                               setVerificationFile(file)
-                              if (file) setSelectedVerificationDocumentId('')
+                              if (file) {
+                                setSelectedVerificationDocumentId('')
+                              } else {
+                                const savedDocument = verificationDocuments.find((document) =>
+                                  profileVerificationDocumentIds.has(document.documentId),
+                                )
+                                setSelectedVerificationDocumentId(savedDocument?.documentId || '')
+                              }
                             }}
                             className="mt-1.5 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-primary-50 file:px-3 file:py-1.5 file:font-medium file:text-primary-700"
                           />
                         </label>
                       </div>
+                      {verificationFile && (
+                        <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-600">
+                          <span className="truncate">Selected replacement: {verificationFile.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVerificationFile(null)
+                              const savedDocument = getPreferredVerificationDocument()
+                              setSelectedVerificationDocumentId(savedDocument?.documentId || '')
+                              if (savedDocument) setVerificationDocumentType(savedDocument.documentType)
+                            }}
+                            className="shrink-0 font-semibold text-primary-700 hover:underline"
+                          >
+                            {getPreferredVerificationDocument() ? 'Keep saved document' : 'Clear file'}
+                          </button>
+                        </div>
+                      )}
                       <p className="mt-2 text-xs text-slate-500">
                         {verificationFile
                           ? `This file will be used for this application: ${verificationFile.name}`
                           : selectedVerificationDocumentId
-                            ? 'Your selected saved document will be attached to this application.'
-                            : 'Select a saved document or upload one to continue.'}
+                            ? 'Your selected document will be attached unless you choose a replacement.'
+                            : 'Upload a student ID or biodata document to continue.'}
                       </p>
                     </div>
                   )}
