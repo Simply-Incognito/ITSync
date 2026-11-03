@@ -207,4 +207,24 @@ describe('organization application review authorization', () => {
     expect(application.save).not.toHaveBeenCalled();
     expect(applicationReviewEventModel.create).not.toHaveBeenCalled();
   });
+
+  it('does not allow a system administrator to accept a student application', async () => {
+    const application = {
+      _id: applicationId,
+      opportunityId,
+      status: 'offer',
+      save: vi.fn(),
+    };
+    applicationModel.findById.mockResolvedValue(application);
+    userModel.findById.mockReturnValue({
+      select: vi.fn().mockReturnValue(leanResult({ role: 'administrator' })),
+    });
+
+    await expect(
+      updateApplicationStatus(applicationId, 'accepted', String(representativeId)),
+    ).rejects.toMatchObject({ statusCode: 403, code: 'ROLE_FORBIDDEN' });
+
+    expect(application.save).not.toHaveBeenCalled();
+    expect(applicationReviewEventModel.create).not.toHaveBeenCalled();
+  });
 });
