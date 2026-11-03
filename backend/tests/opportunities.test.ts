@@ -49,7 +49,7 @@ const deadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 const validOpportunity = {
   title: 'Software Engineering SIWES Placement',
   description: 'Work with the product engineering team on supervised software projects.',
-  fieldOfStudy: 'Computer Science',
+  fieldOfStudy: ['Computer Science', 'Software Engineering'],
   location: { city: 'Lagos', state: 'Lagos', country: 'Nigeria' },
   workArrangement: 'hybrid',
   durationWeeks: 24,
@@ -147,7 +147,9 @@ describe('opportunity routes', () => {
 describe('opportunity validation', () => {
   it('accepts valid opportunity data and rejects expired deadlines or unknown fields', () => {
     expect(opportunityCreateSchema.safeParse(validOpportunity).success).toBe(true);
-    expect(opportunityCreateSchema.safeParse(validOpportunity).success).toBe(true);
+    expect(
+      opportunityCreateSchema.safeParse({ ...validOpportunity, fieldOfStudy: [] }).success,
+    ).toBe(false);
     expect(
       opportunityCreateSchema.safeParse({ ...validOpportunity, applicationDeadline: '2020-01-01' })
         .success,

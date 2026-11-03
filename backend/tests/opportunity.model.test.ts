@@ -8,7 +8,7 @@ describe('opportunity model capacity validation', () => {
       createdBy: '68d2c50a8c4e1c843a39a204',
       title: 'Software Engineering SIWES Placement',
       description: 'Work with the product engineering team on supervised software projects.',
-      fieldOfStudy: 'Computer Science',
+      fieldOfStudy: ['Computer Science', 'Software Engineering'],
       location: { city: 'Lagos', state: 'Lagos', country: 'Nigeria' },
       workArrangement: 'hybrid',
       durationWeeks: 24,

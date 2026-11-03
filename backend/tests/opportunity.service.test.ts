@@ -61,7 +61,7 @@ describe('opportunity moderation service', () => {
             const input = {
                 title: 'Software Engineering SIWES Placement',
                 description: 'Work with the product engineering team on supervised software projects.',
-                fieldOfStudy: 'Computer Science',
+                fieldOfStudy: ['Computer Science', 'Software Engineering'],
                 requiredSkills: [],
                 academicRequirements: '',
                 location: { city: 'Lagos', state: 'Lagos', country: 'Nigeria' },
