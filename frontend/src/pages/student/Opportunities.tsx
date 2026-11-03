@@ -10,6 +10,7 @@ import {
   MapPin,
   Search,
   SlidersHorizontal,
+  Users,
   X,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -427,13 +428,29 @@ export default function StudentOpportunities() {
         opportunityId,
         studentDocumentIds: [documentId],
       })
-      setAppliedOpportunityIds((current) => new Set(current).add(opportunityId))
       const appliedOpportunity = opportunities.find((opportunity) => opportunity._id === opportunityId)
-      if (appliedOpportunity) {
+      const updatedOpportunity = appliedOpportunity
+        ? {
+            ...appliedOpportunity,
+            applicationsCount: (appliedOpportunity.applicationsCount ?? 0) + 1,
+          }
+        : undefined
+      if (updatedOpportunity) {
+        setOpportunities((current) =>
+          current.map((opportunity) =>
+            opportunity._id === opportunityId ? updatedOpportunity : opportunity,
+          ),
+        )
+        setSelectedOpportunity((current) =>
+          current?._id === opportunityId ? updatedOpportunity : current,
+        )
+      }
+      setAppliedOpportunityIds((current) => new Set(current).add(opportunityId))
+      if (updatedOpportunity) {
         setAppliedOpportunities((current) =>
           current.some((opportunity) => opportunity._id === opportunityId)
             ? current
-            : [appliedOpportunity, ...current],
+            : [updatedOpportunity, ...current],
         )
         setAppliedOpportunityCount((count) => count + 1)
       }
@@ -779,6 +796,13 @@ export default function StudentOpportunities() {
                             <Building2 size={15} className="shrink-0 text-slate-400" />
                             {opportunity.availableSlots} {opportunity.availableSlots === 1 ? 'slot' : 'slots'}
                           </span>
+                          {opportunity.applicationsCount !== undefined && (
+                            <span className="inline-flex items-center gap-2">
+                              <Users size={15} className="shrink-0 text-slate-400" />
+                              {opportunity.applicationsCount}{' '}
+                              {opportunity.applicationsCount === 1 ? 'application' : 'applications'}
+                            </span>
+                          )}
                         </div>
 
                         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
@@ -914,6 +938,11 @@ export default function StudentOpportunities() {
                     <p><strong>Work arrangement:</strong> {formatArrangement(selectedOpportunity.workArrangement)}</p>
                     <p><strong>Duration:</strong> {selectedOpportunity.durationWeeks} weeks</p>
                     <p><strong>Available slots:</strong> {selectedOpportunity.availableSlots}</p>
+                    {selectedOpportunity.applicationsCount !== undefined && (
+                      <p>
+                        <strong>Applications received:</strong> {selectedOpportunity.applicationsCount}
+                      </p>
+                    )}
                     <p className="inline-flex items-center gap-2">
                       <CalendarDays size={16} />
                       <strong>Deadline:</strong> {new Date(selectedOpportunity.applicationDeadline).toLocaleDateString()}
