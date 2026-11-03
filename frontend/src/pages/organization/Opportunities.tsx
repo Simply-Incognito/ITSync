@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Briefcase, Clock, CheckCircle, X, XCircle, Edit, Eye, type LucideIcon } from 'lucide-react'
+import { Plus, Briefcase, Clock, CheckCircle, X, XCircle, Edit, Eye, Download, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { opportunityApi, organizationApi } from '../../services/api'
+import { applicationApi, opportunityApi, organizationApi, studentDocumentApi } from '../../services/api'
 import { nigerianCourseGroups } from '../../data/nigerian-courses'
-import type { Opportunity, OpportunityInput, Organization, WorkArrangement } from '../../types/domain'
+import type { Application, Opportunity, OpportunityInput, Organization, Pagination, StudentProfile, WorkArrangement } from '../../types/domain'
 import { getErrorMessage } from '../../utils/errors'
 import { getOpportunityFields } from '../../utils/opportunity-fields'
 import { notify } from '../../lib/notify'
@@ -57,6 +57,13 @@ export default function OrganizationOpportunities() {
   const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState<OpportunityFormState>(emptyForm)
   const [organization, setOrganization] = useState<Organization | null>(null)
+  const [reviewOpportunity, setReviewOpportunity] = useState<Opportunity | null>(null)
+  const [reviewApplications, setReviewApplications] = useState<Application[]>([])
+  const [reviewPagination, setReviewPagination] = useState<Pagination | null>(null)
+  const [reviewPage, setReviewPage] = useState(1)
+  const [reviewLoading, setReviewLoading] = useState(false)
+  const [updatingApplicationId, setUpdatingApplicationId] = useState<string | null>(null)
+  const [profileToView, setProfileToView] = useState<{ student: StudentProfile | null; name: string } | null>(null)
 
   useEffect(() => {
     fetchOpportunities()
@@ -171,6 +178,65 @@ export default function OrganizationOpportunities() {
       notify.success('Applications closed.')
     } catch (error) {
       notify.error(getErrorMessage(error, 'Failed to close opportunity.'))
+    }
+  }
+
+  const loadApplications = async (opportunityId: string, page: number) => {
+    setReviewLoading(true)
+    try {
+      const response = await applicationApi.listForOrganization({ opportunityId, page, limit: 20 })
+      setReviewApplications(response.applications)
+      setReviewPagination(response.pagination)
+      setReviewPage(page)
+    } catch (error) {
+      notify.error(getErrorMessage(error, 'Unable to load applications for this opportunity.'))
+    } finally {
+      setReviewLoading(false)
+    }
+  }
+
+  const openApplications = (opportunity: Opportunity) => {
+    setReviewOpportunity(opportunity)
+    setReviewApplications([])
+    setReviewPagination(null)
+    void loadApplications(opportunity._id, 1)
+  }
+
+  const reviewApplication = async (application: Application, status: 'accepted' | 'rejected') => {
+    let reason: string | undefined
+    if (status === 'rejected') {
+      reason = window.prompt('Please provide a reason for rejecting this application:')?.trim()
+      if (!reason) return
+      if (reason.length < 5) {
+        notify.error('Please enter a rejection reason of at least 5 characters.')
+        return
+      }
+    } else if (!window.confirm('Accept this student application?')) {
+      return
+    }
+
+    setUpdatingApplicationId(application._id)
+    try {
+      await applicationApi.updateStatus(application._id, { status, reason })
+      if (reviewOpportunity) await loadApplications(reviewOpportunity._id, reviewPage)
+      notify.success(status === 'accepted' ? 'Application accepted.' : 'Application rejected.')
+    } catch (error) {
+      notify.error(getErrorMessage(error, 'Unable to update this application.'))
+    } finally {
+      setUpdatingApplicationId(null)
+    }
+  }
+
+  const downloadSubmittedDocument = async (applicationId: string, document: NonNullable<Application['documents']>[number]) => {
+    try {
+      const url = await studentDocumentApi.downloadForOrganization(applicationId, document._id)
+      const link = window.document.createElement('a')
+      link.href = url
+      link.download = document.originalName
+      link.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (error) {
+      notify.error(getErrorMessage(error, 'Unable to download the submitted document.'))
     }
   }
 
@@ -562,6 +628,14 @@ export default function OrganizationOpportunities() {
                         )}
                       </div>
                     </details>
+                    <button
+                      type="button"
+                      onClick={() => openApplications(opp)}
+                      className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary-50 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-100"
+                    >
+                      <Eye size={16} aria-hidden="true" />
+                      Review applications{typeof opp.applicationsCount === 'number' ? ` (${opp.applicationsCount})` : ''}
+                    </button>
                     <div className="mt-4 flex flex-wrap gap-3">
                       {(opp.status === 'draft' || opp.status === 'rejected') && (
                         <>
@@ -605,6 +679,132 @@ export default function OrganizationOpportunities() {
           )}
         </motion.div>
       </div>
+      {reviewOpportunity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="dialog" aria-modal="true" aria-labelledby="application-review-title">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="application-review-title" className="text-xl font-bold text-slate-900">Applications for {reviewOpportunity.title}</h2>
+                <p className="mt-1 text-sm text-slate-600">Review student details and submitted documents. Profile information is read-only.</p>
+              </div>
+              <button type="button" aria-label="Close applications" onClick={() => setReviewOpportunity(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
+                <X size={20} />
+              </button>
+            </div>
+            {reviewLoading ? (
+              <div className="py-12 text-center text-slate-500">Loading applications…</div>
+            ) : reviewApplications.length === 0 ? (
+              <div className="mt-6 rounded-xl border border-slate-200 p-8 text-center text-slate-600">No applications have been received for this opportunity yet.</div>
+            ) : (
+              <div className="mt-6 space-y-4">
+                {reviewApplications.map((application) => {
+                  const student = typeof application.studentId === 'string' ? null : application.studentId
+                  const profile = application.studentProfile
+                  const name = profile?.fullName || student?.fullName || 'Student'
+                  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+                  const decisionPending = ['accepted', 'rejected', 'withdrawn'].includes(application.status)
+                  return (
+                    <article key={application._id} className="rounded-xl border border-slate-200 p-4 sm:p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setProfileToView({ student: profile ?? null, name })}
+                            aria-label={`View ${name}'s profile`}
+                            title="View read-only student profile"
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-100 font-bold text-primary-700 hover:bg-primary-200"
+                          >
+                            {initials || 'S'}
+                          </button>
+                          <div>
+                            <h3 className="font-semibold text-slate-900">{name}</h3>
+                            <p className="text-sm text-slate-600">{student?.email || 'Email not provided'}</p>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-700">{application.status.replace('_', ' ')}</span>
+                      </div>
+                      <div className="mt-4 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                        <p><span className="font-medium">Institution:</span> {profile?.institution || student?.institution || 'Not provided'}</p>
+                        <p><span className="font-medium">Course:</span> {profile?.fieldOfStudy || profile?.department || 'Not provided'}</p>
+                        <p><span className="font-medium">Level:</span> {profile?.currentLevel || 'Not provided'}</p>
+                        <p><span className="font-medium">Matric number:</span> {profile?.matricNumber || 'Not provided'}</p>
+                        <p><span className="font-medium">Submitted:</span> {new Date(application.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="mt-4">
+                        <p className="mb-2 text-sm font-semibold text-slate-800">Submitted required document(s)</p>
+                        {application.documents?.length ? (
+                          <div className="flex flex-wrap gap-2">
+                            {application.documents.map((document) => (
+                              <button
+                                key={document._id}
+                                type="button"
+                                onClick={() => void downloadSubmittedDocument(application._id, document)}
+                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-primary-700 hover:bg-primary-50"
+                              >
+                                <Download size={15} aria-hidden="true" />
+                                {document.originalName}
+                              </button>
+                            ))}
+                          </div>
+                        ) : <p className="text-sm text-slate-500">No submitted documents are available.</p>}
+                      </div>
+                      {application.rejectionReason && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{application.rejectionReason}</p>}
+                      {!decisionPending && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <button type="button" disabled={updatingApplicationId === application._id} onClick={() => void reviewApplication(application, 'accepted')} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">Accept</button>
+                          <button type="button" disabled={updatingApplicationId === application._id} onClick={() => void reviewApplication(application, 'rejected')} className="rounded-lg bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50">Reject</button>
+                        </div>
+                      )}
+                    </article>
+                  )
+                })}
+              </div>
+            )}
+            {reviewPagination && reviewPagination.totalPages > 1 && (
+              <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4 text-sm">
+                <span className="text-slate-600">Page {reviewPagination.page} of {reviewPagination.totalPages} · {reviewPagination.total} applications</span>
+                <div className="flex gap-2">
+                  <button type="button" disabled={reviewPage <= 1 || reviewLoading} onClick={() => void loadApplications(reviewOpportunity._id, reviewPage - 1)} className="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-50">Previous</button>
+                  <button type="button" disabled={reviewPage >= reviewPagination.totalPages || reviewLoading} onClick={() => void loadApplications(reviewOpportunity._id, reviewPage + 1)} className="rounded-lg border border-slate-300 px-3 py-2 disabled:opacity-50">Next</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {profileToView && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true" aria-labelledby="student-profile-title">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 id="student-profile-title" className="text-xl font-bold text-slate-900">{profileToView.name}</h2>
+                <p className="mt-1 text-sm text-slate-500">Student profile · read-only</p>
+              </div>
+              <button type="button" aria-label="Close student profile" onClick={() => setProfileToView(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={20} /></button>
+            </div>
+            {profileToView.student ? (
+              <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+                {[
+                  ['Institution', profileToView.student.institution],
+                  ['Matric number', profileToView.student.matricNumber],
+                  ['Department', profileToView.student.department],
+                  ['Course / field of study', profileToView.student.fieldOfStudy],
+                  ['Current level', profileToView.student.currentLevel],
+                  ['Phone', profileToView.student.phoneNumber],
+                  ['Expected duration', profileToView.student.expectedDurationWeeks ? `${profileToView.student.expectedDurationWeeks} weeks` : undefined],
+                  ['Preferred locations', profileToView.student.preferredLocations?.join(', ')],
+                  ['Skills', profileToView.student.skills?.join(', ')],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="font-medium text-slate-500">{label}</dt>
+                    <dd className="mt-1 text-slate-800">{value || 'Not provided'}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : <p className="mt-5 text-sm text-slate-600">This student profile is not available.</p>}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
