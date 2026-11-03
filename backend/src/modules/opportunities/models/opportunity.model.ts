@@ -48,7 +48,7 @@ const opportunitySchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true, trim: true, maxlength: 160 },
     description: { type: String, required: true, trim: true, maxlength: 10000 },
-    fieldOfStudy: { type: String, required: true, trim: true, maxlength: 160 },
+    fieldOfStudy: [{ type: String, required: true, trim: true, maxlength: 160 }],
     imageKey: { type: String, enum: opportunityImageKeys, default: 'business-collaboration' },
     requiredSkills: [{ type: String, trim: true, maxlength: 100 }],
     academicRequirements: { type: String, trim: true, maxlength: 3000, default: '' },
