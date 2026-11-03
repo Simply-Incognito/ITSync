@@ -146,6 +146,7 @@ export interface Opportunity {
   workArrangement: WorkArrangement
   durationWeeks: number
   availableSlots: number
+  applicationsCount?: number
   applicationDeadline: string
   requiredDocuments: string[]
   additionalRequirements?: string

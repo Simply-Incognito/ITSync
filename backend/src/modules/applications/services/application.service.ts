@@ -49,9 +49,6 @@ export async function canApplyForOpportunity(
   }).lean();
   if (existingApplication) return false;
 
-  // Check if slots are still available
-  if (opportunity.availableSlots <= 0) return false;
-
   // Check if application deadline hasn't passed
   if (opportunity.applicationDeadline <= new Date()) return false;
 
@@ -117,26 +114,8 @@ export async function createApplication(
         );
       }
 
-      if (opportunity.availableSlots <= 0) {
-        throw new AppError('No available slots for this opportunity.', 409, 'NO_AVAILABLE_SLOTS');
-      }
-
       if (opportunity.applicationDeadline <= new Date()) {
         throw new AppError('The application deadline has passed.', 400, 'APPLICATION_DEADLINE_PASSED');
-      }
-
-      const reservation = await Opportunity.updateOne(
-        {
-          _id: opportunityId,
-          status: 'published',
-          applicationDeadline: { $gt: new Date() },
-          availableSlots: { $gt: 0 },
-        },
-        { $inc: { availableSlots: -1 } },
-        { session },
-      );
-      if (reservation.modifiedCount !== 1) {
-        throw new AppError('No available slots for this opportunity.', 409, 'NO_AVAILABLE_SLOTS');
       }
 
       const applicationId = new Types.ObjectId();
