@@ -160,7 +160,6 @@ export interface OpportunityInput {
   title: string
   description: string
   fieldOfStudy: string
-  imageKey?: string
   requiredSkills?: string[]
   academicRequirements?: string
   location: OpportunityLocation
