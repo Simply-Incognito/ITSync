@@ -516,11 +516,11 @@ export const organizationAdminApi = {
       registrySource: string
       registryReference: string
       checks: {
-        registryRecordFound: true
-        legalNameAndNumberMatch: true
-        representativeAuthorityConfirmed: true
-        independentlySourcedContactConfirmed: true
-        documentsAppearAuthentic: true
+        registryRecordFound: boolean
+        legalNameAndNumberMatch: boolean
+        representativeAuthorityConfirmed: boolean
+        independentlySourcedContactConfirmed: boolean
+        documentsAppearAuthentic: boolean
       }
       note?: string
     },
