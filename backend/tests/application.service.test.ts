@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   studentModel,
+  userModel,
   opportunityModel,
   organizationModel,
   applicationModel,
@@ -11,9 +12,10 @@ const {
   applicationStatuses,
 } = vi.hoisted(() => ({
   studentModel: { findOne: vi.fn() },
-  opportunityModel: { findById: vi.fn(), updateOne: vi.fn() },
-  organizationModel: { findById: vi.fn() },
-  applicationModel: Object.assign(vi.fn(), { findOne: vi.fn() }),
+  userModel: { findById: vi.fn() },
+  opportunityModel: { findById: vi.fn(), findOne: vi.fn(), updateOne: vi.fn() },
+  organizationModel: { findById: vi.fn(), findOne: vi.fn() },
+  applicationModel: Object.assign(vi.fn(), { findOne: vi.fn(), findById: vi.fn() }),
   applicationReviewEventModel: { create: vi.fn() },
   assertStudentVerificationDocuments: vi.fn(),
   applicationStatuses: [
@@ -29,6 +31,7 @@ const {
 }));
 
 vi.mock('../src/modules/identity/models/student.model.js', () => ({ Student: studentModel }));
+vi.mock('../src/modules/identity/models/user.model.js', () => ({ User: userModel }));
 vi.mock('../src/modules/opportunities/models/opportunity.model.js', () => ({
   Opportunity: opportunityModel,
 }));
@@ -46,7 +49,10 @@ vi.mock('../src/modules/documents/services/document.service.js', () => ({
   assertStudentVerificationDocuments,
 }));
 
-import { createApplication } from '../src/modules/applications/services/application.service.js';
+import {
+  createApplication,
+  updateApplicationStatus,
+} from '../src/modules/applications/services/application.service.js';
 
 const studentId = new Types.ObjectId();
 const opportunityId = new Types.ObjectId();
@@ -164,5 +170,41 @@ describe('application submission availability', () => {
 
     expect(opportunityModel.updateOne).not.toHaveBeenCalled();
     expect(savedApplication.save).toHaveBeenCalledWith({ session });
+  });
+});
+
+describe('organization application review authorization', () => {
+  const organizationId = new Types.ObjectId();
+  const applicationId = new Types.ObjectId();
+  const representativeId = new Types.ObjectId();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('does not allow a representative to review an application for another organization', async () => {
+    const application = {
+      _id: applicationId,
+      opportunityId,
+      status: 'submitted',
+      save: vi.fn(),
+    };
+    applicationModel.findById.mockResolvedValue(application);
+    userModel.findById.mockReturnValue({
+      select: vi.fn().mockReturnValue(leanResult({ role: 'organization_representative' })),
+    });
+    organizationModel.findOne.mockReturnValue({
+      select: vi.fn().mockReturnValue(leanResult({ _id: organizationId })),
+    });
+    opportunityModel.findOne.mockReturnValue({
+      select: vi.fn().mockReturnValue(leanResult(null)),
+    });
+
+    await expect(
+      updateApplicationStatus(applicationId, 'accepted', String(representativeId)),
+    ).rejects.toMatchObject({ statusCode: 404, code: 'APPLICATION_NOT_FOUND' });
+
+    expect(application.save).not.toHaveBeenCalled();
+    expect(applicationReviewEventModel.create).not.toHaveBeenCalled();
   });
 });

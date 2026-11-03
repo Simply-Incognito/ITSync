@@ -39,6 +39,11 @@ const applicationId = '68d2c50a8c4e1c843a39a206';
 const studentDocumentId = '68d2c50a8c4e1c843a39a207';
 
 const studentIdentity = { id: studentId, email: 'student@example.test', role: 'student' };
+const organizationIdentity = {
+  id: '68d2c50a8c4e1c843a39a208',
+  email: 'organization@example.test',
+  role: 'organization_representative',
+};
 const adminIdentity = { id: adminId, email: 'admin@example.test', role: 'administrator' };
 
 describe('application routes', () => {
@@ -147,6 +152,21 @@ describe('application routes', () => {
     );
   });
 
+  it('allows an organization to review applications for a specific opportunity', async () => {
+    authenticate.mockResolvedValue(organizationIdentity);
+
+    const response = await request(app)
+      .get('/api/v1/applications/organization/me')
+      .query({ opportunityId, page: '2', limit: '50' })
+      .set('Authorization', 'Bearer test-token');
+
+    expect(response.status).toBe(200);
+    expect(applicationService.listApplications).toHaveBeenCalledWith(
+      { opportunityId: expect.any(Types.ObjectId), page: 2, limit: 50 },
+      organizationIdentity.id,
+    );
+  });
+
   it('rejects invalid application filters and pagination', async () => {
     authenticate.mockResolvedValue(adminIdentity);
 
@@ -179,6 +199,23 @@ describe('application routes', () => {
       'under_review',
       adminId,
       'Reviewing candidate',
+    );
+  });
+
+  it('allows an organization representative to accept an application', async () => {
+    authenticate.mockResolvedValue(organizationIdentity);
+
+    const response = await request(app)
+      .patch(`/api/v1/applications/${applicationId}/status`)
+      .set('Authorization', 'Bearer test-token')
+      .send({ status: 'accepted' });
+
+    expect(response.status).toBe(200);
+    expect(applicationService.updateApplicationStatus).toHaveBeenCalledWith(
+      expect.any(Types.ObjectId),
+      'accepted',
+      organizationIdentity.id,
+      undefined,
     );
   });
 
