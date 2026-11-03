@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Briefcase, Clock, CheckCircle, XCircle, Edit, Eye, type LucideIcon } from 'lucide-react'
+import { Plus, Briefcase, Clock, CheckCircle, X, XCircle, Edit, Eye, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { opportunityApi, organizationApi } from '../../services/api'
+import { nigerianCourseGroups } from '../../data/nigerian-courses'
 import type { Opportunity, OpportunityInput, Organization, WorkArrangement } from '../../types/domain'
 import { getErrorMessage } from '../../utils/errors'
+import { getOpportunityFields } from '../../utils/opportunity-fields'
 import { notify } from '../../lib/notify'
 
 interface OpportunityFormState {
   title: string
   description: string
-  fieldOfStudy: string
+  fieldOfStudy: string[]
   requiredSkills: string
   city: string
   state: string
@@ -25,7 +27,7 @@ interface OpportunityFormState {
 const emptyForm: OpportunityFormState = {
   title: '',
   description: '',
-  fieldOfStudy: '',
+  fieldOfStudy: [],
   requiredSkills: '',
   city: '',
   state: '',
@@ -102,7 +104,7 @@ export default function OrganizationOpportunities() {
     setFormData({
       title: opportunity.title,
       description: opportunity.description,
-      fieldOfStudy: opportunity.fieldOfStudy,
+      fieldOfStudy: getOpportunityFields(opportunity.fieldOfStudy),
       requiredSkills: (opportunity.requiredSkills || []).join(', '),
       city: opportunity.location.city,
       state: opportunity.location.state,
@@ -123,7 +125,7 @@ export default function OrganizationOpportunities() {
     const data: OpportunityInput = {
       title: formData.title.trim(),
       description: formData.description.trim(),
-      fieldOfStudy: formData.fieldOfStudy.trim(),
+      fieldOfStudy: formData.fieldOfStudy,
       requiredSkills: requiredSkills.length > 0 ? requiredSkills : undefined,
       location: {
         city: formData.city.trim(),
@@ -290,16 +292,64 @@ export default function OrganizationOpportunities() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">Field of Study</label>
-                      <input
-                        type="text"
-                        name="fieldOfStudy"
-                        minLength={2}
-                        maxLength={160}
-                        value={formData.fieldOfStudy}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        required
-                      />
+                      <div className="rounded-xl border border-slate-300 bg-white p-3 focus-within:ring-2 focus-within:ring-primary-500">
+                        <div className="mb-2 flex flex-wrap gap-2">
+                          {formData.fieldOfStudy.map((course) => (
+                            <span
+                              key={course}
+                              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"
+                            >
+                              {course}
+                              <button
+                                type="button"
+                                aria-label={`Remove ${course}`}
+                                onClick={() =>
+                                  setFormData((current) => ({
+                                    ...current,
+                                    fieldOfStudy: current.fieldOfStudy.filter((value) => value !== course),
+                                  }))
+                                }
+                                className="rounded-full text-slate-500 hover:text-slate-900"
+                              >
+                                <X size={13} aria-hidden="true" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        <select
+                          value=""
+                          onChange={(event) => {
+                            const course = event.target.value
+                            if (
+                              course &&
+                              formData.fieldOfStudy.length < 20 &&
+                              !formData.fieldOfStudy.includes(course)
+                            ) {
+                              setFormData((current) => ({
+                                ...current,
+                                fieldOfStudy: [...current.fieldOfStudy, course],
+                              }))
+                            }
+                          }}
+                          className="w-full border-0 bg-transparent py-2 text-sm text-slate-700 focus:ring-0"
+                          required={formData.fieldOfStudy.length === 0}
+                          aria-label="Choose a field of study"
+                        >
+                          <option value="">Select a course to add</option>
+                          {nigerianCourseGroups.map((group) => (
+                            <optgroup key={group.label} label={group.label}>
+                              {group.courses.map((course) => (
+                                <option key={course} value={course}>
+                                  {course}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Choose up to 20 courses ({formData.fieldOfStudy.length} selected). Remove a course with its X button.
+                      </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">Work Arrangement</label>
@@ -471,7 +521,9 @@ export default function OrganizationOpportunities() {
                         </div>
                         <div>
                           <h3 className="font-semibold text-slate-800">{opp.title}</h3>
-                          <p className="text-sm text-slate-600 mt-1">{opp.fieldOfStudy}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {getOpportunityFields(opp.fieldOfStudy).join(', ')}
+                          </p>
                           <p className="text-xs text-slate-500 mt-2">
                             {opp.location?.city}, {opp.location?.state} • {opp.durationWeeks} weeks • {opp.availableSlots} slots
                           </p>

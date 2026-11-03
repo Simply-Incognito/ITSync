@@ -25,6 +25,7 @@ import type {
   StudentVerificationDocumentType,
 } from '../../types/domain'
 import { getOrganizationName } from '../../utils/display'
+import { getOpportunityFields } from '../../utils/opportunity-fields'
 import { getOpportunityImageUrl } from '../../utils/opportunity-images'
 
 type OpportunityTab = 'for-you' | 'saved' | 'applied' | 'all'
@@ -113,7 +114,7 @@ function normalizeMatchText(value: string) {
 }
 
 function getCourseMatchScore(opportunity: Opportunity, courses: string[]) {
-  const field = normalizeMatchText(opportunity.fieldOfStudy || '')
+  const field = normalizeMatchText(getOpportunityFields(opportunity.fieldOfStudy).join(' '))
   const title = normalizeMatchText(opportunity.title || '')
   const details = normalizeMatchText(
     [
@@ -768,9 +769,11 @@ export default function StudentOpportunities() {
                               </span>
                             </div>
                             <p className="mt-1 truncate text-sm font-medium text-slate-600">
-                              {organizationName || opportunity.fieldOfStudy}
+                              {organizationName || getOpportunityFields(opportunity.fieldOfStudy).join(', ')}
                               <span className="mx-2 text-slate-300">|</span>
-                              <span className="font-normal text-slate-500">{opportunity.fieldOfStudy}</span>
+                              <span className="font-normal text-slate-500">
+                                {getOpportunityFields(opportunity.fieldOfStudy).join(', ')}
+                              </span>
                             </p>
                           </div>
                         </div>
@@ -832,7 +835,7 @@ export default function StudentOpportunities() {
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-slate-950/10" />
                         <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-white/30 bg-slate-950/40 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-colors duration-300 group-hover:border-white/50 group-hover:bg-slate-950/55">
                           <span className="h-1.5 w-1.5 rounded-full bg-primary-300" />
-                          {opportunity.fieldOfStudy}
+                          {getOpportunityFields(opportunity.fieldOfStudy).join(', ')}
                         </div>
                         <button
                           type="button"
@@ -906,7 +909,9 @@ export default function StudentOpportunities() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-primary-700">{selectedOpportunity.fieldOfStudy}</p>
+                    <p className="text-sm font-medium text-primary-700">
+                      {getOpportunityFields(selectedOpportunity.fieldOfStudy).join(', ')}
+                    </p>
                     <h2 id="opportunity-details-title" className="mt-1 text-2xl font-semibold text-slate-900">
                       {selectedOpportunity.title}
                     </h2>
