@@ -110,7 +110,7 @@ describe('application submission availability', () => {
     ).rejects.toMatchObject({ statusCode: 400, code: 'APPLICATION_DEADLINE_PASSED' });
   });
 
-  it('reserves one slot in the same transaction as the application', async () => {
+  it('creates an application without changing the opportunity slot count', async () => {
     const savedApplication = { save: vi.fn().mockResolvedValue(undefined) };
     const opportunity = {
       _id: opportunityId,
@@ -131,16 +131,7 @@ describe('application submission availability', () => {
       createApplication({ studentId, opportunityId, studentDocumentIds: [] }, String(studentId)),
     ).resolves.toBe(savedApplication);
 
-    expect(opportunityModel.updateOne).toHaveBeenCalledWith(
-      {
-        _id: opportunityId,
-        status: 'published',
-        applicationDeadline: { $gt: expect.any(Date) },
-        availableSlots: { $gt: 0 },
-      },
-      { $inc: { availableSlots: -1 } },
-      { session },
-    );
+    expect(opportunityModel.updateOne).not.toHaveBeenCalled();
     expect(savedApplication.save).toHaveBeenCalledWith({ session });
     expect(applicationReviewEventModel.create).toHaveBeenCalledWith(
       [expect.objectContaining({ studentId, action: 'submitted' })],
@@ -149,7 +140,8 @@ describe('application submission availability', () => {
     expect(session.endSession).toHaveBeenCalledOnce();
   });
 
-  it('does not create an application when the conditional slot reservation fails', async () => {
+  it('allows applications when the posted slot count is zero', async () => {
+    const savedApplication = { save: vi.fn().mockResolvedValue(undefined) };
     opportunityModel.findById.mockReturnValue({
       session: vi.fn().mockReturnValue(
         leanResult({
@@ -157,20 +149,20 @@ describe('application submission availability', () => {
           organizationId: new Types.ObjectId(),
           status: 'published',
           applicationDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
-          availableSlots: 1,
+          availableSlots: 0,
         }),
       ),
     });
     organizationModel.findById.mockReturnValue({
       session: vi.fn().mockReturnValue(leanResult({ verificationStatus: 'verified' })),
     });
-    opportunityModel.updateOne.mockResolvedValue({ modifiedCount: 0 });
+    applicationModel.mockImplementation(() => savedApplication);
 
     await expect(
       createApplication({ studentId, opportunityId, studentDocumentIds: [] }, String(studentId)),
-    ).rejects.toMatchObject({ statusCode: 409, code: 'NO_AVAILABLE_SLOTS' });
+    ).resolves.toBe(savedApplication);
 
-    expect(applicationModel).not.toHaveBeenCalled();
-    expect(applicationReviewEventModel.create).not.toHaveBeenCalled();
+    expect(opportunityModel.updateOne).not.toHaveBeenCalled();
+    expect(savedApplication.save).toHaveBeenCalledWith({ session });
   });
 });
