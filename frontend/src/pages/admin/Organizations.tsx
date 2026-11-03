@@ -169,16 +169,19 @@ export default function AdminOrganizations() {
           );
           return;
         }
+        const approvalChecks = {
+          registryRecordFound: checks.registryRecordFound,
+          legalNameAndNumberMatch: checks.legalNameAndNumberMatch,
+          representativeAuthorityConfirmed: checks.representativeAuthorityConfirmed,
+          independentlySourcedContactConfirmed:
+            checks.independentlySourcedContactConfirmed,
+          documentsAppearAuthentic: checks.documentsAppearAuthentic,
+        };
+
         await organizationAdminApi.approve(selectedOrganization._id, {
           registrySource: registrySource.trim(),
           registryReference: registryReference.trim(),
-          checks: {
-            registryRecordFound: true,
-            legalNameAndNumberMatch: true,
-            representativeAuthorityConfirmed: true,
-            independentlySourcedContactConfirmed: true,
-            documentsAppearAuthentic: true,
-          },
+          checks: approvalChecks,
           ...(reviewNote.trim() ? { note: reviewNote.trim() } : {}),
         });
       } else {
