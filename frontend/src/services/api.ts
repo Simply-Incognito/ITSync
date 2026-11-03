@@ -393,10 +393,17 @@ export const applicationApi = {
       `/applications${query}`,
     )
   },
-  listForOrganization: () =>
-    request<{ applications: Application[]; pagination: Pagination }>(
-      '/applications/organization/me',
-    ),
+  listForOrganization: (
+    params: { opportunityId?: string; page?: number; limit?: number } = {},
+  ) => {
+    const query = new URLSearchParams()
+    if (params.opportunityId) query.set('opportunityId', params.opportunityId)
+    if (params.page !== undefined) query.set('page', String(params.page))
+    if (params.limit !== undefined) query.set('limit', String(params.limit))
+    return request<{ applications: Application[]; pagination: Pagination }>(
+      `/applications/organization/me${query.size ? `?${query}` : ''}`,
+    )
+  },
   updateStatus: (id: string, data: { status: ApplicationStatus; reason?: string }) =>
     request<{ application: Application }>(`/applications/${id}/status`, {
       method: 'PATCH',
