@@ -5,14 +5,12 @@ import { Link } from 'react-router-dom'
 import { opportunityApi, organizationApi } from '../../services/api'
 import type { Opportunity, OpportunityInput, Organization, WorkArrangement } from '../../types/domain'
 import { getErrorMessage } from '../../utils/errors'
-import { getOpportunityImageChoices } from '../../utils/opportunity-images'
 import { notify } from '../../lib/notify'
 
 interface OpportunityFormState {
   title: string
   description: string
   fieldOfStudy: string
-  imageKey: string
   requiredSkills: string
   city: string
   state: string
@@ -28,7 +26,6 @@ const emptyForm: OpportunityFormState = {
   title: '',
   description: '',
   fieldOfStudy: '',
-  imageKey: '',
   requiredSkills: '',
   city: '',
   state: '',
@@ -40,6 +37,16 @@ const emptyForm: OpportunityFormState = {
   additionalRequirements: '',
 }
 
+function formatLocalDateInput(date: Date) {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10)
+}
+
+function getMinimumDeadlineDate() {
+  const date = new Date()
+  date.setDate(date.getDate() + 1)
+  return formatLocalDateInput(date)
+}
+
 export default function OrganizationOpportunities() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,7 +54,6 @@ export default function OrganizationOpportunities() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formData, setFormData] = useState<OpportunityFormState>(emptyForm)
-  const [organizationIndustry, setOrganizationIndustry] = useState('')
   const [organization, setOrganization] = useState<Organization | null>(null)
 
   useEffect(() => {
@@ -59,7 +65,6 @@ export default function OrganizationOpportunities() {
       const organizationResponse = await organizationApi.getProfile()
       const currentOrganization = organizationResponse.organization
       setOrganization(currentOrganization)
-      setOrganizationIndustry(currentOrganization?.industry ?? '')
 
       if (currentOrganization?.verificationStatus !== 'verified') {
         setOpportunities([])
@@ -88,10 +93,7 @@ export default function OrganizationOpportunities() {
 
   const openCreateForm = () => {
     setEditingId(null)
-    setFormData({
-      ...emptyForm,
-      imageKey: getOpportunityImageChoices(organizationIndustry)[0].id,
-    })
+    setFormData(emptyForm)
     setShowCreateForm(true)
   }
 
@@ -101,8 +103,6 @@ export default function OrganizationOpportunities() {
       title: opportunity.title,
       description: opportunity.description,
       fieldOfStudy: opportunity.fieldOfStudy,
-      imageKey:
-        opportunity.imageKey ?? getOpportunityImageChoices(organizationIndustry)[0].id,
       requiredSkills: (opportunity.requiredSkills || []).join(', '),
       city: opportunity.location.city,
       state: opportunity.location.state,
@@ -110,7 +110,7 @@ export default function OrganizationOpportunities() {
       workArrangement: opportunity.workArrangement,
       durationWeeks: String(opportunity.durationWeeks),
       availableSlots: String(opportunity.availableSlots),
-      applicationDeadline: new Date(opportunity.applicationDeadline).toISOString().slice(0, 10),
+      applicationDeadline: formatLocalDateInput(new Date(opportunity.applicationDeadline)),
       additionalRequirements: opportunity.additionalRequirements || '',
     })
     setShowCreateForm(true)
@@ -119,12 +119,12 @@ export default function OrganizationOpportunities() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+    const requiredSkills = formData.requiredSkills.split(',').map((value) => value.trim()).filter(Boolean)
     const data: OpportunityInput = {
       title: formData.title.trim(),
       description: formData.description.trim(),
       fieldOfStudy: formData.fieldOfStudy.trim(),
-      imageKey: formData.imageKey,
-      requiredSkills: formData.requiredSkills.split(',').map((value) => value.trim()).filter(Boolean),
+      requiredSkills: requiredSkills.length > 0 ? requiredSkills : undefined,
       location: {
         city: formData.city.trim(),
         state: formData.state.trim(),
@@ -277,7 +277,7 @@ export default function OrganizationOpportunities() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Required skills</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Required skills (optional)</label>
                     <input
                       type="text"
                       name="requiredSkills"
@@ -315,34 +315,9 @@ export default function OrganizationOpportunities() {
                       </select>
                     </div>
                   </div>
-                  <div>
-                    <div className="mb-2">
-                      <p className="text-sm font-medium text-slate-700">Opportunity image</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Choose a professionally designed image suggested for your {organizationIndustry || 'industry'}.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      {getOpportunityImageChoices(organizationIndustry).map((choice) => (
-                        <button
-                          key={choice.id}
-                          type="button"
-                          aria-pressed={formData.imageKey === choice.id}
-                          onClick={() => setFormData((current) => ({ ...current, imageKey: choice.id }))}
-                          className={`overflow-hidden rounded-xl border-2 text-left transition ${
-                            formData.imageKey === choice.id
-                              ? 'border-primary-500 ring-2 ring-primary-100'
-                              : 'border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <img src={choice.src} alt="" className="h-20 w-full object-cover" />
-                          <span className="block px-2.5 py-2 text-xs font-medium text-slate-700">
-                            {choice.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <p className="text-xs text-slate-500">
+                    The system will choose an image that matches your organization&apos;s industry.
+                  </p>
                   <div className="rounded-xl border border-primary-100 bg-primary-50 p-4">
                     <p className="text-sm font-semibold text-slate-800">
                       Required applicant verification
@@ -382,6 +357,7 @@ export default function OrganizationOpportunities() {
                         type="number"
                         name="availableSlots"
                         min={1}
+                        step={1}
                         max={10000}
                         value={formData.availableSlots}
                         onChange={handleChange}
@@ -427,10 +403,13 @@ export default function OrganizationOpportunities() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">Application Deadline</label>
+                    <p className="mb-2 text-xs text-slate-500">
+                      The deadline must be at least 24 hours after your opportunity is approved and published.
+                    </p>
                     <input
                       type="date"
                       name="applicationDeadline"
-                      min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
+                      min={getMinimumDeadlineDate()}
                       value={formData.applicationDeadline}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"

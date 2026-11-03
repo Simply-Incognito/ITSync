@@ -62,7 +62,7 @@ function formatArrangement(arrangement: Opportunity['workArrangement']) {
 
 function getAvailabilityLabel(opportunity: Opportunity) {
   if (opportunity.status === 'closed') return 'Closed'
-  if (new Date(opportunity.applicationDeadline).getTime() < Date.now()) return 'Expired'
+  if (new Date(opportunity.applicationDeadline).getTime() <= Date.now()) return 'Expired'
   return 'Ongoing'
 }
 
@@ -177,7 +177,7 @@ function getRecommendedOpportunities(opportunities: Opportunity[], profile: Stud
     .filter(
       (opportunity) =>
         opportunity.status === 'published' &&
-        new Date(opportunity.applicationDeadline).getTime() >= Date.now(),
+        new Date(opportunity.applicationDeadline).getTime() > Date.now(),
     )
     .map((opportunity) => {
       const courseScore = getCourseMatchScore(opportunity, courses)
