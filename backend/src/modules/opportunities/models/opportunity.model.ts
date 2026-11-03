@@ -59,7 +59,7 @@ const opportunitySchema = new Schema(
     },
     workArrangement: { type: String, enum: ['onsite', 'hybrid', 'remote'], required: true },
     durationWeeks: { type: Number, required: true, min: 1, max: 104 },
-    availableSlots: { type: Number, required: true, min: 1, max: 10000 },
+    availableSlots: { type: Number, required: true, min: 0, max: 10000 },
     applicationDeadline: { type: Date, required: true },
     requiredDocuments: [{ type: String, trim: true, maxlength: 120 }],
     additionalRequirements: { type: String, trim: true, maxlength: 3000, default: '' },
