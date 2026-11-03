@@ -138,7 +138,7 @@ export interface Opportunity {
   createdBy?: string
   title: string
   description: string
-  fieldOfStudy: string
+  fieldOfStudy: string[] | string
   imageKey?: string
   requiredSkills: string[]
   academicRequirements?: string
@@ -160,7 +160,7 @@ export interface Opportunity {
 export interface OpportunityInput {
   title: string
   description: string
-  fieldOfStudy: string
+  fieldOfStudy: string[]
   requiredSkills?: string[]
   academicRequirements?: string
   location: OpportunityLocation
