@@ -259,6 +259,14 @@ export async function updateApplicationStatus(
   const actor = await User.findById(actorUserId).select('role').lean();
   if (!actor) throw new AppError('Authentication is required.', 401, 'UNAUTHENTICATED');
 
+  if (newStatus === 'accepted' && actor.role !== 'organization_representative') {
+    throw new AppError(
+      'Only the organization representative can accept a student application.',
+      403,
+      'ROLE_FORBIDDEN',
+    );
+  }
+
   if (actor.role === 'organization_representative') {
     const organization = await Organization.findOne({ representativeUserId: actorUserId })
       .select('_id')
