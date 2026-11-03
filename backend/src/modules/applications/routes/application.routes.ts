@@ -35,6 +35,7 @@ function parseObjectId(value: string | undefined, message: string, code: string)
 const studentAccess = [requireAuthentication, requireRoles('student')];
 const orgAccess = [requireAuthentication, requireRoles('organization_representative')];
 const adminAccess = [requireAuthentication, requireRoles('administrator')];
+const reviewerAccess = [requireAuthentication, requireRoles('administrator', 'organization_representative')];
 
 function paginationValue(value: unknown, fallback: number, name: string, maximum: number) {
   if (value === undefined) return fallback;
@@ -101,14 +102,24 @@ applicationRouter.get('/', ...adminAccess, async (request, response) => {
 
 applicationRouter.get('/organization/me', ...orgAccess, async (request, response) => {
   const identity = requireIdentity(request);
-  const result = await listApplications({}, identity.id);
+  const opportunityId =
+    request.query.opportunityId === undefined
+      ? undefined
+      : parseObjectId(
+          typeof request.query.opportunityId === 'string' ? request.query.opportunityId : undefined,
+          'A valid opportunityId is required.',
+          'INVALID_OPPORTUNITY_ID',
+        );
+  const page = paginationValue(request.query.page, 1, 'page', 100_000);
+  const limit = paginationValue(request.query.limit, 20, 'limit', 100);
+  const result = await listApplications({ opportunityId, page, limit }, identity.id);
 
   response.json({ applications: result.applications, pagination: result.pagination });
 });
 
 applicationRouter.patch(
   '/:applicationId/status',
-  ...adminAccess,
+  ...reviewerAccess,
   async (request, response) => {
     const input = updateApplicationStatusSchema.parse(request.body);
     const applicationId = parseObjectId(

@@ -176,28 +176,24 @@ export async function listApplications(
     filter.studentId = studentId || userId;
   } else if (userRole.role === 'organization_representative') {
     // Organization reps see applications for their opportunities
-    if (!opportunityId) {
-      const myOrganizations = await Organization.findOne({
-        representativeUserId: userId,
-      })
-        .select('_id')
-        .lean();
-      if (myOrganizations) {
-        const oppIds = await Opportunity.distinct('_id', {
-          organizationId: myOrganizations._id,
-        });
-        filter.opportunityId = { $in: oppIds };
-      } else {
-        filter.opportunityId = undefined;
-      }
-    }
+    const myOrganization = await Organization.findOne({ representativeUserId: userId })
+      .select('_id')
+      .lean();
+    const opportunityIds = myOrganization
+      ? await Opportunity.distinct('_id', { organizationId: myOrganization._id })
+      : [];
+    filter.opportunityId = opportunityId
+      ? { $in: opportunityIds.filter((id) => String(id) === String(opportunityId)) }
+      : { $in: opportunityIds };
   } else if (userRole.role === 'administrator') {
     // Administrators see all applications
   }
 
   if (status) filter.status = status;
   if (studentId) filter.studentId = studentId;
-  if (opportunityId) filter.opportunityId = opportunityId;
+  if (opportunityId && userRole?.role !== 'organization_representative') {
+    filter.opportunityId = opportunityId;
+  }
 
   const skip = (page - 1) * limit;
 
@@ -208,7 +204,10 @@ export async function listApplications(
         path: 'opportunityId',
         select:
           'title description fieldOfStudy requiredSkills location workArrangement durationWeeks availableSlots applicationDeadline requiredDocuments status createdAt organizationId academicRequirements additionalRequirements',
-        populate: { path: 'organizationId', select: 'legalName tradingName' },
+        populate: {
+          path: 'organizationId',
+          select: 'legalName tradingName industry description website representativeName representativeTitle address verificationStatus',
+        },
       })
       .populate('documents', 'documentType originalName contentType byteSize')
       .sort({ createdAt: -1 })
@@ -218,8 +217,28 @@ export async function listApplications(
     Application.countDocuments(filter),
   ]);
 
+  const studentUserIds = applications
+    .map((application) => {
+      const student = application.studentId as { _id?: Types.ObjectId } | null;
+      return student?._id;
+    })
+    .filter((id): id is Types.ObjectId => Boolean(id));
+  const studentProfiles = await Student.find({ userId: { $in: studentUserIds } }).lean();
+  const profilesByUserId = new Map(
+    studentProfiles.map((profile) => [String(profile.userId), profile]),
+  );
+  const applicationsWithProfiles = applications.map((application) => {
+    const student = application.studentId as { _id?: Types.ObjectId } | null;
+    return {
+      ...application,
+      studentProfile: student?._id
+        ? profilesByUserId.get(String(student._id)) ?? null
+        : null,
+    };
+  });
+
   return {
-    applications,
+    applications: applicationsWithProfiles,
     pagination: {
       page,
       limit,
@@ -237,6 +256,28 @@ export async function updateApplicationStatus(
 ): Promise<unknown> {
   const application = await Application.findById(applicationId);
   if (!application) throw new AppError('Application not found.', 404, 'APPLICATION_NOT_FOUND');
+  const actor = await User.findById(actorUserId).select('role').lean();
+  if (!actor) throw new AppError('Authentication is required.', 401, 'UNAUTHENTICATED');
+
+  if (actor.role === 'organization_representative') {
+    const organization = await Organization.findOne({ representativeUserId: actorUserId })
+      .select('_id')
+      .lean();
+    if (!organization) {
+      throw new AppError('Application not found.', 404, 'APPLICATION_NOT_FOUND');
+    }
+    const opportunity = await Opportunity.findOne({
+      _id: application.opportunityId,
+      organizationId: organization._id,
+    })
+      .select('_id')
+      .lean();
+    if (!opportunity) {
+      throw new AppError('Application not found.', 404, 'APPLICATION_NOT_FOUND');
+    }
+  } else if (actor.role !== 'administrator') {
+    throw new AppError('You are not allowed to review this application.', 403, 'FORBIDDEN');
+  }
 
   // Define valid transitions
   const validTransitions: Record<ApplicationStatus, ApplicationStatus[]> = {
@@ -251,7 +292,11 @@ export async function updateApplicationStatus(
   };
 
   const currentStatus = application.status as ApplicationStatus;
-  if (!validTransitions[currentStatus]?.includes(newStatus)) {
+  const organizationDecision =
+    actor.role === 'organization_representative' &&
+    (newStatus === 'accepted' || newStatus === 'rejected') &&
+    !['accepted', 'rejected', 'withdrawn'].includes(currentStatus);
+  if (!organizationDecision && !validTransitions[currentStatus]?.includes(newStatus)) {
     throw new AppError(
       `Cannot transition from "${currentStatus}" to "${newStatus}".`,
       409,
