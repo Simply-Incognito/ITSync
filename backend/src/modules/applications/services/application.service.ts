@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { AppError } from '../../../errors/app-error.js';
 import { User } from '../../identity/models/user.model.js';
 import { Student } from '../../identity/models/student.model.js';
@@ -75,78 +75,107 @@ export async function createApplication(
   if (!student) throw new AppError('Student profile not found.', 404, 'STUDENT_PROFILE_NOT_FOUND');
   await assertStudentVerificationDocuments(studentDocumentIds, new Types.ObjectId(studentId));
 
-  // Check if opportunity exists and is available
-  const opportunity = await Opportunity.findById(opportunityId).lean();
-  if (!opportunity) throw new AppError('Opportunity not found.', 404, 'OPPORTUNITY_NOT_FOUND');
+  const session = await mongoose.startSession();
+  let application: InstanceType<typeof Application> | undefined;
+  try {
+    await session.withTransaction(async () => {
+      const opportunity = await Opportunity.findById(opportunityId).session(session).lean();
+      if (!opportunity) {
+        throw new AppError('Opportunity not found.', 404, 'OPPORTUNITY_NOT_FOUND');
+      }
 
-  if (opportunity.status !== 'published') {
-    throw new AppError(
-      'Only published opportunities can receive applications.',
-      409,
-      'OPPORTUNITY_NOT_APPLICABLE',
-    );
+      if (opportunity.status !== 'published') {
+        throw new AppError(
+          'Only published opportunities can receive applications.',
+          409,
+          'OPPORTUNITY_NOT_APPLICABLE',
+        );
+      }
+
+      const organization = await Organization.findById(opportunity.organizationId)
+        .session(session)
+        .lean();
+      if (!organization || organization.verificationStatus !== 'verified') {
+        throw new AppError(
+          'Only verified organizations can receive applications.',
+          403,
+          'ORGANIZATION_NOT_VERIFIED',
+        );
+      }
+
+      const existingApplication = await Application.findOne({
+        studentId: student.userId,
+        opportunityId,
+      })
+        .session(session)
+        .lean();
+      if (existingApplication) {
+        throw new AppError(
+          'You have already applied to this opportunity.',
+          409,
+          'DUPLICATE_APPLICATION',
+        );
+      }
+
+      if (opportunity.availableSlots <= 0) {
+        throw new AppError('No available slots for this opportunity.', 409, 'NO_AVAILABLE_SLOTS');
+      }
+
+      if (opportunity.applicationDeadline <= new Date()) {
+        throw new AppError('The application deadline has passed.', 400, 'APPLICATION_DEADLINE_PASSED');
+      }
+
+      const reservation = await Opportunity.updateOne(
+        {
+          _id: opportunityId,
+          status: 'published',
+          applicationDeadline: { $gt: new Date() },
+          availableSlots: { $gt: 0 },
+        },
+        { $inc: { availableSlots: -1 } },
+        { session },
+      );
+      if (reservation.modifiedCount !== 1) {
+        throw new AppError('No available slots for this opportunity.', 409, 'NO_AVAILABLE_SLOTS');
+      }
+
+      const applicationId = new Types.ObjectId();
+      application = new Application({
+        _id: applicationId,
+        studentId: student.userId,
+        opportunityId,
+        status: 'submitted',
+        documents: studentDocumentIds,
+      });
+      await application.save({ session });
+
+      await ApplicationReviewEvent.create(
+        [
+          {
+            applicationId,
+            studentId: student.userId,
+            action: 'submitted',
+            fromStatus: 'submitted',
+            toStatus: 'submitted',
+          },
+        ],
+        { session },
+      );
+    });
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000) {
+      throw new AppError(
+        'You have already applied to this opportunity.',
+        409,
+        'DUPLICATE_APPLICATION',
+      );
+    }
+    throw error;
+  } finally {
+    await session.endSession();
   }
 
-  // Check verification status of organization
-  const organization = await Organization.findById(opportunity.organizationId).lean();
-  if (!organization || organization.verificationStatus !== 'verified') {
-    throw new AppError(
-      'Only verified organizations can receive applications.',
-      403,
-      'ORGANIZATION_NOT_VERIFIED',
-    );
-  }
-
-  // Check if student already applied
-  const existingApplication = await Application.findOne({
-    studentId: student.userId,
-    opportunityId,
-  }).lean();
-  if (existingApplication) {
-    throw new AppError(
-      'You have already applied to this opportunity.',
-      409,
-      'DUPLICATE_APPLICATION',
-    );
-  }
-
-  // Check if slots are still available
-  if (opportunity.availableSlots <= 0) {
-    throw new AppError('No available slots for this opportunity.', 409, 'NO_AVAILABLE_SLOTS');
-  }
-
-  // Check if application deadline hasn't passed
-  if (opportunity.applicationDeadline <= new Date()) {
-    throw new AppError('The application deadline has passed.', 400, 'APPLICATION_DEADLINE_PASSED');
-  }
-
-  // Create the application
-  const applicationId = new Types.ObjectId();
-  const application = new Application({
-    _id: applicationId,
-    studentId: student.userId,
-    opportunityId,
-    status: 'submitted',
-    documents: studentDocumentIds,
-  });
-
-  await application.save();
-
-  // Reserve a slot atomically so concurrent applications cannot oversubscribe.
-  await Opportunity.updateOne(
-    { _id: opportunityId, availableSlots: { $gt: 0 } },
-    { $inc: { availableSlots: -1 } },
-  );
-
-  // Create review event
-  await ApplicationReviewEvent.create({
-    applicationId,
-    studentId: student.userId,
-    action: 'submitted',
-    fromStatus: 'submitted',
-    toStatus: 'submitted',
-  });
-
+  if (!application) throw new Error('Application transaction completed without creating an application.');
   return application;
 }
 
