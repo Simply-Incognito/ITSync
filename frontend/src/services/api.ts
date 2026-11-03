@@ -122,7 +122,7 @@ export type AdminOpportunity = {
   _id: string
   title: string
   description?: string
-  fieldOfStudy?: string
+  fieldOfStudy?: string[] | string
   imageKey?: string
   requiredSkills?: string[]
   academicRequirements?: string
