@@ -12,13 +12,28 @@ export const opportunityStatuses = [
 export const opportunityImageKeys = [
   'technology-network',
   'technology-code',
+  'technology-team',
   'finance-growth',
+  'finance-market',
+  'finance-analysis',
   'healthcare-care',
+  'healthcare-team',
+  'healthcare-lab',
   'engineering-design',
+  'engineering-build',
+  'engineering-lab',
   'energy-future',
+  'energy-solar',
+  'energy-wind',
   'agriculture-fields',
+  'agriculture-crops',
+  'agriculture-greenhouse',
   'business-collaboration',
+  'business-office',
+  'business-education',
 ] as const;
+
+export type OpportunityImageKey = (typeof opportunityImageKeys)[number];
 
 export type OpportunityStatus = (typeof opportunityStatuses)[number];
 
