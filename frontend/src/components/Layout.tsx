@@ -5,6 +5,7 @@ import Footer from './Footer'
 import FeedbackWidget from './FeedbackWidget'
 import AppToaster from './AppToaster'
 import { WorkspaceNavigationProvider } from './WorkspaceNavigationContext'
+import CursorSparkles from './CursorSparkles'
 
 export default function Layout() {
   const { isLoading } = useAuth()
@@ -29,6 +30,7 @@ export default function Layout() {
         {!isWorkspace && <Footer />}
         <FeedbackWidget />
         <AppToaster />
+        <CursorSparkles />
       </div>
     </WorkspaceNavigationProvider>
   )
