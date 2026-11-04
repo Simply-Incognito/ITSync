@@ -34,7 +34,6 @@ function parseObjectId(value: string | undefined, message: string, code: string)
 
 const studentAccess = [requireAuthentication, requireRoles('student')];
 const orgAccess = [requireAuthentication, requireRoles('organization_representative')];
-const adminAccess = [requireAuthentication, requireRoles('administrator')];
 
 function paginationValue(value: unknown, fallback: number, name: string, maximum: number) {
   if (value === undefined) return fallback;
@@ -82,7 +81,8 @@ applicationRouter.get('/my', ...studentAccess, async (request, response) => {
   response.json({ applications: result.applications, pagination: result.pagination });
 });
 
-applicationRouter.get('/', ...adminAccess, async (request, response) => {
+applicationRouter.get('/organization/me', ...orgAccess, async (request, response) => {
+  const identity = requireIdentity(request);
   const statusValue = request.query.status;
   if (
     statusValue !== undefined &&
@@ -94,42 +94,31 @@ applicationRouter.get('/', ...adminAccess, async (request, response) => {
   const status = statusValue as ApplicationStatus | undefined;
   const page = paginationValue(request.query.page, 1, 'page', 100_000);
   const limit = paginationValue(request.query.limit, 20, 'limit', 100);
-
-  const result = await listApplications({ status, page, limit }, requireIdentity(request).id);
-  response.json({ applications: result.applications, pagination: result.pagination });
-});
-
-applicationRouter.get('/organization/me', ...orgAccess, async (request, response) => {
-  const identity = requireIdentity(request);
-  const result = await listApplications({}, identity.id);
+  const result = await listApplications({ status, page, limit }, identity.id);
 
   response.json({ applications: result.applications, pagination: result.pagination });
 });
 
-applicationRouter.patch(
-  '/:applicationId/status',
-  ...adminAccess,
-  async (request, response) => {
-    const input = updateApplicationStatusSchema.parse(request.body);
-    const applicationId = parseObjectId(
-      routeParam(request, 'applicationId', {
-        code: 'APPLICATION_NOT_FOUND',
-        message: 'Application was not found.',
-      }),
-      'Application was not found.',
-      'APPLICATION_NOT_FOUND',
-    );
+applicationRouter.patch('/:applicationId/status', ...orgAccess, async (request, response) => {
+  const input = updateApplicationStatusSchema.parse(request.body);
+  const applicationId = parseObjectId(
+    routeParam(request, 'applicationId', {
+      code: 'APPLICATION_NOT_FOUND',
+      message: 'Application was not found.',
+    }),
+    'Application was not found.',
+    'APPLICATION_NOT_FOUND',
+  );
 
-    const application = await updateApplicationStatus(
-      applicationId,
-      input.status,
-      requireIdentity(request).id,
-      input.reason,
-    );
+  const application = await updateApplicationStatus(
+    applicationId,
+    input.status,
+    requireIdentity(request).id,
+    input.reason,
+  );
 
-    response.json({ application });
-  },
-);
+  response.json({ application });
+});
 
 applicationRouter.get('/me/:opportunityId', ...studentAccess, async (request, response) => {
   const identity = requireIdentity(request);
