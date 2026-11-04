@@ -179,7 +179,10 @@ export const openApiDocument = {
         tags: ['Administration'],
         security: [{ bearerAuth: [] }],
         responses: {
-          '200': { description: 'Administration statistics.' },
+          '200': {
+            description:
+              'Administration statistics, including daily student, organization, application, and opportunity publishing counts for the last 30 days.',
+          },
           '401': { description: 'Administrator role required.' },
         },
       },
