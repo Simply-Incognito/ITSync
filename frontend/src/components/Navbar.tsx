@@ -22,6 +22,7 @@ export default function Navbar() {
   const navigate = useNavigate()
   const dashboardLink = user ? getDashboardPath(user.role) : '/login'
   const isWorkspace = ['/student/', '/organization/', '/admin/'].some((prefix) => pathname.startsWith(prefix))
+  const isAuthenticationPage = pathname === '/login' || pathname === '/register'
 
   useEffect(() => {
     document.documentElement.dataset.theme = isDarkMode ? 'dark' : 'light'
@@ -98,7 +99,7 @@ export default function Navbar() {
             {isDarkMode ? <Sun className="h-[18px] w-[18px]" aria-hidden="true" /> : <Moon className="h-[18px] w-[18px]" aria-hidden="true" />}
           </button>
 
-          {!isWorkspace && (
+          {!isWorkspace && !isAuthenticationPage && (
             <button
               type="button"
               onClick={() => setMobileOpen((current) => !current)}
@@ -115,7 +116,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {mobileOpen && !isWorkspace && (
+      {mobileOpen && !isWorkspace && !isAuthenticationPage && (
         <nav id="mobile-navigation" aria-label="Mobile navigation" className="border-t border-line bg-surface px-4 py-3 lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-1">
             {isAuthenticated ? (
