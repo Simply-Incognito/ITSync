@@ -256,8 +256,41 @@ describe('administration routes', () => {
     expect(organizationReviewFind.find).toHaveBeenCalledWith({});
     expect(opportunityReviewFind.find).toHaveBeenCalledWith({});
     expect(applicationReviewFind.find).toHaveBeenCalledWith({});
-    expect(organizationReviewFind.query.skip).toHaveBeenCalledWith(10);
-    expect(organizationReviewFind.query.limit).toHaveBeenCalledWith(10);
+    expect(organizationReviewFind.query.skip).not.toHaveBeenCalled();
+    expect(organizationReviewFind.query.limit).toHaveBeenCalledWith(20);
+  });
+
+  it('paginates the globally sorted activity feed without skipping records', async () => {
+    const logs = Array.from({ length: 15 }, (_, index) => ({
+      _id: `log-${index + 1}`,
+      actorUserId: administrator.id,
+      action: 'user_status_changed',
+      targetType: 'user',
+      targetId: administrator.id,
+      details: {},
+      createdAt: new Date(2026, 0, 15 - index),
+    }));
+    const sort = vi.fn().mockReturnThis();
+    const limit = vi.fn().mockReturnThis();
+    const lean = vi.fn().mockResolvedValue(logs);
+    AdministrationLog.find.mockReturnValue({ sort, limit, lean });
+    AdministrationLog.countDocuments.mockResolvedValue(15);
+
+    const response = await request(app)
+      .get('/api/v1/administration/activity?page=2&limit=10')
+      .set('Authorization', 'Bearer test-token');
+
+    expect(response.status).toBe(200);
+    expect(response.body.activities.map((activity: { _id: string }) => activity._id)).toEqual(
+      logs.slice(10).map((log) => log._id),
+    );
+    expect(response.body.pagination).toEqual({
+      page: 2,
+      limit: 10,
+      total: 15,
+      totalPages: 2,
+    });
+    expect(limit).toHaveBeenCalledWith(20);
   });
 
   it('requires authentication', async () => {
