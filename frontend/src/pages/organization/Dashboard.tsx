@@ -161,7 +161,19 @@ export default function OrganizationDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 gap-4 mb-8 md:grid-cols-2 xl:grid-cols-4">
+          <Link
+            to="/organization/applications"
+            className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm border border-slate-200 hover:border-primary-300 hover:shadow-md transition-all group"
+          >
+            <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center group-hover:bg-primary-200 transition-colors">
+              <FileText className="text-primary-600" size={24} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-800">Applications</h3>
+              <p className="text-sm text-slate-600">Review and manage applicants</p>
+            </div>
+          </Link>
           <Link
             to="/organization/opportunities"
             className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm border border-slate-200 hover:border-primary-300 hover:shadow-md transition-all group"
@@ -202,8 +214,14 @@ export default function OrganizationDashboard() {
 
         {/* Recent Applications */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-          <div className="p-6 border-b border-slate-200">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-6 border-b border-slate-200">
             <h2 className="text-xl font-semibold text-slate-800">Recent Applications</h2>
+            <Link
+              to="/organization/applications"
+              className="text-sm font-semibold text-primary-700 hover:text-primary-800"
+            >
+              Manage all applications
+            </Link>
           </div>
           {applications.length === 0 ? (
             <div className="p-12 text-center">
