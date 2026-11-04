@@ -24,7 +24,7 @@ const AdminUsers = lazy(() => import('./pages/admin/Users'))
 const AdminOrganizations = lazy(() => import('./pages/admin/Organizations'))
 const AdminActivity = lazy(() => import('./pages/admin/Activity'))
 const AdminOpportunities = lazy(() => import('./pages/admin/Opportunities'))
-const AdminApplications = lazy(() => import('./pages/admin/Applications'))
+const OrganizationApplications = lazy(() => import('./pages/organization/Applications'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 const roleHome: Record<UserRole, string> = {
@@ -68,6 +68,7 @@ export default function App() {
               <Route path="dashboard" element={<OrganizationDashboard />} />
               <Route path="profile" element={<OrganizationProfile />} />
               <Route path="opportunities" element={<OrganizationOpportunities />} />
+              <Route path="applications" element={<OrganizationApplications />} />
               <Route path="verification" element={<OrganizationVerification />} />
             </Route>
             <Route path="admin" element={<RoleRoute allowedRole="administrator" />}>
@@ -77,7 +78,6 @@ export default function App() {
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="organizations" element={<AdminOrganizations />} />
                 <Route path="opportunities" element={<AdminOpportunities />} />
-                <Route path="applications" element={<AdminApplications />} />
                 <Route path="activity" element={<AdminActivity />} />
               </Route>
             </Route>

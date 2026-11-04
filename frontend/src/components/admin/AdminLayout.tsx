@@ -2,7 +2,6 @@ import {
   Activity,
   Building2,
   BriefcaseBusiness,
-  ClipboardList,
   LayoutDashboard,
   LogOut,
   ShieldCheck,
@@ -20,7 +19,6 @@ const navigation = [
     label: "Opportunities",
     icon: BriefcaseBusiness,
   },
-  { to: "/admin/applications", label: "Applications", icon: ClipboardList },
   { to: "/admin/activity", label: "Activity log", icon: Activity },
 ];
 
