@@ -11,48 +11,55 @@ const {
   applicationReviewFind,
   AdministrationLog,
 } = vi.hoisted(() => {
-    const administrationLogSave = vi.fn();
-    const administrationLogConstruct = vi.fn();
-    const createReviewFind = () => {
-      const query = {
-        sort: vi.fn(),
-        limit: vi.fn(),
-        lean: vi.fn().mockResolvedValue([]),
-      };
-      query.sort.mockReturnValue(query);
-      query.limit.mockReturnValue(query);
-      return { find: vi.fn().mockReturnValue(query) };
+  const administrationLogSave = vi.fn();
+  const administrationLogConstruct = vi.fn();
+  const createReviewFind = () => {
+    const query = {
+      sort: vi.fn(),
+      skip: vi.fn(),
+      limit: vi.fn(),
+      lean: vi.fn().mockResolvedValue([]),
     };
-    const organizationReviewFind = createReviewFind();
-    const opportunityReviewFind = createReviewFind();
-    const applicationReviewFind = createReviewFind();
-
-    class MockAdministrationLog {
-      static find = vi.fn();
-
-      save = administrationLogSave;
-
-      constructor(fields: Record<string, unknown>) {
-        administrationLogConstruct(fields);
-        Object.assign(this, fields);
-      }
-    }
-
+    query.sort.mockReturnValue(query);
+    query.skip.mockReturnValue(query);
+    query.limit.mockReturnValue(query);
     return {
-      authenticate: vi.fn(),
-      administrationService: {
-        getUserManagement: vi.fn(),
-        getOrganizationManagement: vi.fn(),
-        getAdministrationDashboardStats: vi.fn(),
-      },
-      administrationLogSave,
-      administrationLogConstruct,
-      organizationReviewFind,
-      opportunityReviewFind,
-      applicationReviewFind,
-      AdministrationLog: MockAdministrationLog,
+      find: vi.fn().mockReturnValue(query),
+      countDocuments: vi.fn().mockResolvedValue(0),
+      query,
     };
-  });
+  };
+  const organizationReviewFind = createReviewFind();
+  const opportunityReviewFind = createReviewFind();
+  const applicationReviewFind = createReviewFind();
+
+  class MockAdministrationLog {
+    static find = vi.fn();
+    static countDocuments = vi.fn().mockResolvedValue(0);
+
+    save = administrationLogSave;
+
+    constructor(fields: Record<string, unknown>) {
+      administrationLogConstruct(fields);
+      Object.assign(this, fields);
+    }
+  }
+
+  return {
+    authenticate: vi.fn(),
+    administrationService: {
+      getUserManagement: vi.fn(),
+      getOrganizationManagement: vi.fn(),
+      getAdministrationDashboardStats: vi.fn(),
+    },
+    administrationLogSave,
+    administrationLogConstruct,
+    organizationReviewFind,
+    opportunityReviewFind,
+    applicationReviewFind,
+    AdministrationLog: MockAdministrationLog,
+  };
+});
 
 vi.mock('../src/modules/identity/services/auth.service.js', () => ({ authenticate }));
 vi.mock('../src/modules/administration/services/administration.service.js', () => ({
@@ -138,9 +145,14 @@ describe('administration routes', () => {
     administrationLogSave.mockResolvedValue(undefined);
     AdministrationLog.find.mockReturnValue({
       sort: vi.fn().mockReturnThis(),
+      skip: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       lean: vi.fn().mockResolvedValue([]),
     });
+    AdministrationLog.countDocuments.mockResolvedValue(0);
+    organizationReviewFind.countDocuments.mockResolvedValue(0);
+    opportunityReviewFind.countDocuments.mockResolvedValue(0);
+    applicationReviewFind.countDocuments.mockResolvedValue(0);
   });
 
   it('returns user management list with pagination', async () => {
@@ -204,9 +216,11 @@ describe('administration routes', () => {
   });
 
   it('retrieves administration logs', async () => {
-    const lean = vi.fn().mockResolvedValue([
-      { _id: 'log-1', action: 'organization_approved', createdAt: new Date() },
-    ]);
+    const lean = vi
+      .fn()
+      .mockResolvedValue([
+        { _id: 'log-1', action: 'organization_approved', createdAt: new Date() },
+      ]);
     AdministrationLog.find.mockReturnValue({
       sort: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
@@ -222,15 +236,28 @@ describe('administration routes', () => {
   });
 
   it('combines administration and domain review events in the activity feed', async () => {
+    AdministrationLog.countDocuments.mockResolvedValue(4);
+    organizationReviewFind.countDocuments.mockResolvedValue(5);
+    opportunityReviewFind.countDocuments.mockResolvedValue(3);
+    applicationReviewFind.countDocuments.mockResolvedValue(4);
+
     const response = await request(app)
-      .get('/api/v1/administration/activity')
+      .get('/api/v1/administration/activity?page=2&limit=10')
       .set('Authorization', 'Bearer test-token');
 
     expect(response.status).toBe(200);
     expect(response.body.activities).toEqual([]);
+    expect(response.body.pagination).toEqual({
+      page: 2,
+      limit: 10,
+      total: 16,
+      totalPages: 2,
+    });
     expect(organizationReviewFind.find).toHaveBeenCalledWith({});
     expect(opportunityReviewFind.find).toHaveBeenCalledWith({});
     expect(applicationReviewFind.find).toHaveBeenCalledWith({});
+    expect(organizationReviewFind.query.skip).toHaveBeenCalledWith(10);
+    expect(organizationReviewFind.query.limit).toHaveBeenCalledWith(10);
   });
 
   it('requires authentication', async () => {

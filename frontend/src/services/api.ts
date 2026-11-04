@@ -467,7 +467,16 @@ export const administrationApi = {
     )
   },
   listLogs: () => request<{ logs: AdminLog[] }>('/administration/logs'),
-  listActivity: () => request<{ activities: AdminActivityEvent[] }>('/administration/activity'),
+  listActivity: (params: { page?: number; limit?: number } = {}) => {
+    const query = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) query.set(key, String(value))
+    })
+    return request<{
+      activities: AdminActivityEvent[]
+      pagination: AdminPagination
+    }>(`/administration/activity${query.size ? `?${query}` : ''}`)
+  },
 }
 
 export const organizationAdminApi = {

@@ -206,17 +206,6 @@ export const openApiDocument = {
                   details: { type: 'object', description: 'Additional details', default: {} },
                 },
               },
-              '/administration/activity': {
-                get: {
-                  summary: 'Get recent platform administration activity',
-                  tags: ['Administration'],
-                  security: [{ bearerAuth: [] }],
-                  responses: {
-                    '200': { description: 'Recent account and domain review events.' },
-                    '401': { description: 'Administrator role required.' },
-                  },
-                },
-              },
             },
           },
         },
@@ -237,6 +226,26 @@ export const openApiDocument = {
         ],
         responses: {
           '200': { description: 'Administration logs.' },
+          '401': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/administration/activity': {
+      get: {
+        summary: 'Get paginated platform administration activity',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
+        ],
+        responses: {
+          '200': { description: 'Activity events with pagination metadata.' },
           '401': { description: 'Administrator role required.' },
         },
       },
