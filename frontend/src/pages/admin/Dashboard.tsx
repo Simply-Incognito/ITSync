@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent, type PointerEvent } from "react";
 import {
   Activity,
   ArrowRight,
@@ -6,10 +6,13 @@ import {
   Building2,
   ClipboardList,
   GraduationCap,
+  RotateCcw,
   ShieldCheck,
   Users,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { administrationApi, type AdminOrganization, type AdminStats } from "../../services/api";
 import { notify } from "../../lib/notify";
@@ -32,7 +35,17 @@ const emptyStats: AdminStats = {
   },
   totalOpportunities: 0,
   publishedOpportunities: 0,
+  growth: [],
 };
+
+const growthSeries = [
+  { key: "students", label: "Students", color: "#0284c7" },
+  { key: "organizations", label: "Organizations", color: "#7c3aed" },
+  { key: "applications", label: "Applications", color: "#16a34a" },
+  { key: "publishedOpportunities", label: "Published opportunities", color: "#ea580c" },
+] as const;
+
+type GrowthSeriesKey = (typeof growthSeries)[number]["key"];
 
 const cards = [
   {
@@ -110,6 +123,63 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats>(emptyStats);
   const [organizations, setOrganizations] = useState<AdminOrganization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleDays, setVisibleDays] = useState(30);
+  const [activeDayIndex, setActiveDayIndex] = useState<number | null>(null);
+  const [visibleSeries, setVisibleSeries] = useState<GrowthSeriesKey[]>(
+    growthSeries.map(({ key }) => key),
+  );
+  const reduceMotion = useReducedMotion();
+  const chartWidth = 640;
+  const chartHeight = 260;
+  const chartLeft = 44;
+  const chartRight = 620;
+  const chartTop = 22;
+  const chartBottom = 202;
+  const displayedGrowth = stats.growth.slice(-visibleDays);
+  const activeDay =
+    activeDayIndex === null ? null : displayedGrowth[activeDayIndex] ?? null;
+  const maxDailyGrowth = Math.max(
+    ...displayedGrowth.flatMap((day) =>
+      growthSeries
+        .filter(({ key }) => visibleSeries.includes(key))
+        .map(({ key }) => day[key]),
+    ),
+    1,
+  );
+  const chartX = (index: number) =>
+    chartLeft +
+    (index * (chartRight - chartLeft)) / Math.max(displayedGrowth.length - 1, 1);
+  const chartY = (value: number) =>
+    chartBottom - (value / maxDailyGrowth) * (chartBottom - chartTop);
+
+  const handleChartPointerMove = (event: PointerEvent<SVGSVGElement>) => {
+    if (displayedGrowth.length === 0) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const chartPosition = ((event.clientX - bounds.left) / bounds.width) * chartWidth;
+    const index = Math.round(
+      ((chartPosition - chartLeft) / (chartRight - chartLeft)) *
+        (displayedGrowth.length - 1),
+    );
+    setActiveDayIndex(Math.max(0, Math.min(displayedGrowth.length - 1, index)));
+  };
+
+  const handleChartKeyDown = (event: KeyboardEvent<SVGSVGElement>) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const currentIndex = activeDayIndex ?? displayedGrowth.length - 1;
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    setActiveDayIndex(
+      Math.max(0, Math.min(displayedGrowth.length - 1, currentIndex + direction)),
+    );
+  };
+
+  const toggleGrowthSeries = (key: GrowthSeriesKey) => {
+    setVisibleSeries((current) =>
+      current.includes(key)
+        ? current.filter((visibleKey) => visibleKey !== key)
+        : [...current, key],
+    );
+  };
 
   useEffect(() => {
     let active = true;
@@ -203,6 +273,211 @@ export default function AdminDashboard() {
             </p>
           </motion.article>
         ))}
+      </section>
+
+      <section className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Platform growth</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Daily signups, applications, and opportunity publishing. Hover or focus the graph to inspect a day.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() =>
+                setVisibleDays((days) => (days === 30 ? 14 : 7))
+              }
+              disabled={visibleDays === 7}
+              aria-label="Zoom in on platform growth graph"
+              title="Zoom in"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition hover:bg-white hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ZoomIn size={16} aria-hidden="true" />
+            </button>
+            <span className="min-w-16 text-center text-xs font-medium text-slate-600">
+              {visibleDays} days
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                setVisibleDays((days) => (days === 7 ? 14 : 30))
+              }
+              disabled={visibleDays === 30}
+              aria-label="Zoom out on platform growth graph"
+              title="Zoom out"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition hover:bg-white hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ZoomOut size={16} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setVisibleDays(30)}
+              disabled={visibleDays === 30}
+              aria-label="Reset platform growth graph zoom"
+              title="Reset zoom"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-slate-600 transition hover:bg-white hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <RotateCcw size={14} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        <div className="mt-4 w-full overflow-hidden">
+          <svg
+            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+            preserveAspectRatio="none"
+            className="h-56 w-full touch-pan-y sm:h-64"
+            role="group"
+            aria-label={`Daily platform growth over the last ${visibleDays} days. Use left and right arrow keys to inspect dates.`}
+            tabIndex={0}
+            onPointerMove={handleChartPointerMove}
+            onPointerLeave={() => setActiveDayIndex(null)}
+            onKeyDown={handleChartKeyDown}
+          >
+            {[0, 1, 2, 3].map((line) => {
+              const y = chartTop + (line * (chartBottom - chartTop)) / 3;
+              const value = Math.ceil((maxDailyGrowth * (3 - line)) / 3);
+              return (
+                <g key={line}>
+                  <line x1={chartLeft} x2={chartRight} y1={y} y2={y} stroke="#e8eeea" strokeWidth="1" />
+                  <text x="4" y={y + 4} fill="#64748b" fontSize="10">
+                    {value}
+                  </text>
+                </g>
+              );
+            })}
+            {growthSeries.map((series) => {
+              const points = displayedGrowth.map(
+                (day, index) => `${chartX(index)},${chartY(day[series.key])}`,
+              );
+              return (
+                <g key={series.key}>
+                  <title>{series.label}</title>
+                  {visibleSeries.includes(series.key) && points.length > 1 && (
+                    <motion.polyline
+                      points={points.join(" ")}
+                      fill="none"
+                      stroke={series.color}
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      initial={reduceMotion ? false : { pathLength: 0, opacity: 0.5 }}
+                      animate={{ pathLength: 1, opacity: 1 }}
+                      transition={{ duration: reduceMotion ? 0 : 0.8, ease: "easeOut" }}
+                    />
+                  )}
+                </g>
+              );
+            })}
+            {displayedGrowth.map((day, index) => {
+              const labelInterval = Math.max(1, Math.ceil(displayedGrowth.length / 6));
+              if (index % labelInterval !== 0 && index !== displayedGrowth.length - 1) return null;
+              const x = chartX(index);
+              const date = new Date(`${day.date}T00:00:00Z`);
+              return (
+                <text
+                  key={day.date}
+                  x={x}
+                  y="232"
+                  fill="#64748b"
+                  fontSize="9"
+                  textAnchor="middle"
+                >
+                  {date.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })}
+                </text>
+              );
+            })}
+            {activeDay && activeDayIndex !== null && (
+              <g pointerEvents="none">
+              <line
+                x1={chartX(activeDayIndex)}
+                x2={chartX(activeDayIndex)}
+                y1={chartTop}
+                y2={chartBottom}
+                stroke="#64748b"
+                strokeDasharray="4 4"
+                strokeWidth="1"
+              />
+              {growthSeries
+                .filter(({ key }) => visibleSeries.includes(key))
+                .map((series) => (
+                  <circle
+                    key={series.key}
+                    cx={chartX(activeDayIndex)}
+                    cy={chartY(activeDay[series.key])}
+                    r="5"
+                    fill="white"
+                    stroke={series.color}
+                    strokeWidth="3"
+                  />
+                ))}
+              <g
+                transform={`translate(${Math.max(
+                  chartLeft,
+                  Math.min(chartX(activeDayIndex) - 78, chartRight - 156),
+                )}, ${chartTop + 8})`}
+              >
+                <rect
+                  width="156"
+                  height={30 + visibleSeries.length * 17}
+                  rx="8"
+                  fill="white"
+                  stroke="#cbd5e1"
+                  filter="drop-shadow(0 3px 6px rgb(15 23 42 / 0.12))"
+                />
+                <text x="10" y="18" fill="#334155" fontSize="10" fontWeight="600">
+                  {new Date(`${activeDay.date}T00:00:00Z`).toLocaleDateString(undefined, {
+                    dateStyle: "medium",
+                    timeZone: "UTC",
+                  })}
+                </text>
+                {growthSeries
+                  .filter(({ key }) => visibleSeries.includes(key))
+                  .map((series, index) => (
+                    <g key={series.key}>
+                      <circle cx="14" cy={35 + index * 17} r="3" fill={series.color} />
+                      <text x="22" y={38 + index * 17} fill="#475569" fontSize="9">
+                        {series.label}
+                      </text>
+                      <text
+                        x="146"
+                        y={38 + index * 17}
+                        fill="#0f172a"
+                        fontSize="9"
+                        fontWeight="600"
+                        textAnchor="end"
+                      >
+                        {activeDay[series.key].toLocaleString()}
+                      </text>
+                    </g>
+                  ))}
+              </g>
+              </g>
+            )}
+          </svg>
+        </div>
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-slate-100 pt-3">
+          {growthSeries.map((series) => {
+            const total = displayedGrowth.reduce((sum, day) => sum + day[series.key], 0);
+            const isVisible = visibleSeries.includes(series.key);
+            return (
+              <button
+              key={series.key}
+              type="button"
+              aria-pressed={isVisible}
+              onClick={() => toggleGrowthSeries(series.key)}
+              className={`flex items-center gap-2 rounded px-1 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                isVisible ? "text-slate-600" : "text-slate-400 opacity-60"
+              }`}
+              >
+              <span className="h-0.5 w-4" style={{ backgroundColor: series.color }} aria-hidden="true" />
+              <span>{series.label}</span>
+              <strong className="text-slate-900">{total.toLocaleString()}</strong>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section aria-labelledby="admin-quick-actions">
