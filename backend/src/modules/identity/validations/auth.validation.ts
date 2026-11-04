@@ -4,6 +4,7 @@ import { userRoles } from '../models/user.model.js';
 
 const studentRegistrationSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
+  matricNumber: z.string().trim().min(1).max(80),
   phoneNumber: z.string().trim().max(30).optional(),
   institution: z.string().trim().max(160).optional(),
   department: z.string().trim().max(160).optional(),

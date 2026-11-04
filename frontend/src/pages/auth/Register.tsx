@@ -16,6 +16,7 @@ export default function Register() {
     fullName: '',
     phoneNumber: '',
     institution: '',
+    matricNumber: '',
     department: '',
     fieldOfStudy: '',
     currentLevel: '',
@@ -79,6 +80,7 @@ export default function Register() {
             fullName: formData.fullName,
             phoneNumber: formData.phoneNumber || undefined,
             institution: formData.institution || undefined,
+            matricNumber: formData.matricNumber.trim(),
             department: formData.department || undefined,
             fieldOfStudy: formData.fieldOfStudy || undefined,
             currentLevel: formData.currentLevel || undefined,
@@ -279,6 +281,20 @@ export default function Register() {
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-line rounded-xl bg-surface focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none"
                       placeholder="University of Lagos"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-ink mb-2">Matriculation Number</label>
+                    <input
+                      type="text"
+                      name="matricNumber"
+                      value={formData.matricNumber}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-line rounded-xl bg-surface focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none"
+                      placeholder="ENG/2022/0123"
+                      autoComplete="off"
+                      required
+                      maxLength={80}
                     />
                   </div>
                   <div>
