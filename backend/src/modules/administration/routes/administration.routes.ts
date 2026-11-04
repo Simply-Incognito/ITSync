@@ -130,13 +130,14 @@ administrationRouter.get('/logs', ...adminAccess, async (request, response) => {
 administrationRouter.get('/activity', ...adminAccess, async (request, response) => {
   const { page, limit } = pagination(request.query);
   const skip = (page - 1) * limit;
+  const fetchLimit = skip + limit;
   const sort = { createdAt: -1 as const, _id: -1 as const };
   const [logs, organizationReviews, opportunityReviews, applicationReviews, counts] =
     await Promise.all([
-      AdministrationLog.find({}).sort(sort).skip(skip).limit(limit).lean(),
-      OrganizationReviewEvent.find({}).sort(sort).skip(skip).limit(limit).lean(),
-      OpportunityReviewEvent.find({}).sort(sort).skip(skip).limit(limit).lean(),
-      ApplicationReviewEvent.find({}).sort(sort).skip(skip).limit(limit).lean(),
+      AdministrationLog.find({}).sort(sort).limit(fetchLimit).lean(),
+      OrganizationReviewEvent.find({}).sort(sort).limit(fetchLimit).lean(),
+      OpportunityReviewEvent.find({}).sort(sort).limit(fetchLimit).lean(),
+      ApplicationReviewEvent.find({}).sort(sort).limit(fetchLimit).lean(),
       Promise.all([
         AdministrationLog.countDocuments({}),
         OrganizationReviewEvent.countDocuments({}),
@@ -201,7 +202,7 @@ administrationRouter.get('/activity', ...adminAccess, async (request, response) 
       (left, right) =>
         right.createdAt.getTime() - left.createdAt.getTime() || right._id.localeCompare(left._id),
     )
-    .slice(0, limit);
+    .slice(skip, skip + limit);
 
   const total = counts.reduce((sum, count) => sum + count, 0);
   response.json({
