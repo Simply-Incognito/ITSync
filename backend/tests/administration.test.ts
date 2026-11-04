@@ -141,6 +141,15 @@ describe('administration routes', () => {
       },
       totalOpportunities: 80,
       publishedOpportunities: 40,
+      growth: [
+        {
+          date: '2026-11-04',
+          students: 2,
+          organizations: 1,
+          applications: 4,
+          publishedOpportunities: 1,
+        },
+      ],
     });
     administrationLogSave.mockResolvedValue(undefined);
     AdministrationLog.find.mockReturnValue({

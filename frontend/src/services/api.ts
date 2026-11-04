@@ -78,6 +78,13 @@ export type AdminStats = {
   >
   totalOpportunities: number
   publishedOpportunities: number
+  growth: {
+    date: string
+    students: number
+    organizations: number
+    applications: number
+    publishedOpportunities: number
+  }[]
 }
 
 export type AdminLog = {
