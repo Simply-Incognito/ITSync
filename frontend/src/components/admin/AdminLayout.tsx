@@ -109,15 +109,48 @@ export default function AdminLayout() {
     <div className="min-h-[calc(100vh-4rem)] bg-slate-50 sm:min-h-[calc(100vh-4.5rem)]">
       <div className="mx-auto max-w-[96rem] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 xl:px-8">
         <div className="grid gap-4 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)] xl:gap-6">
-          <aside className="overflow-hidden rounded-2xl shadow-sm lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
+          <aside className="hidden overflow-hidden rounded-2xl shadow-sm lg:sticky lg:top-24 lg:block lg:h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
             <AdminSidebar onLogout={handleLogout} />
           </aside>
 
-          <main className="min-w-0">
+          <main className="min-w-0 pb-24 lg:pb-0">
             <Outlet />
           </main>
         </div>
       </div>
+      <nav
+        aria-label="Administration navigation"
+        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 z-50 flex w-[92vw] max-w-md -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-slate-200/70 bg-white/80 px-2 py-2 shadow-lg shadow-slate-900/10 backdrop-blur-xl lg:hidden"
+      >
+        {navigation.map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end
+            aria-label={label}
+            title={label}
+            className={({ isActive }) =>
+              `flex h-11 min-w-0 flex-1 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
+                isActive
+                  ? "bg-primary-100 text-primary-800 shadow-sm"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              }`
+            }
+          >
+            <Icon size={19} aria-hidden="true" />
+            <span className="sr-only">{label}</span>
+          </NavLink>
+        ))}
+        <button
+          type="button"
+          onClick={handleLogout}
+          aria-label="Sign out"
+          title="Sign out"
+          className="flex h-11 min-w-0 flex-1 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+        >
+          <LogOut size={18} aria-hidden="true" />
+        </button>
+      </nav>
     </div>
   );
 }
