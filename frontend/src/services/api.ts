@@ -111,7 +111,7 @@ export type AdminOpportunity = {
   _id: string
   title: string
   description?: string
-  fieldOfStudy?: string
+  fieldOfStudy?: string[] | string
   imageKey?: string
   requiredSkills?: string[]
   academicRequirements?: string
@@ -381,7 +381,14 @@ export const applicationApi = {
       `/applications/my${query.size ? `?${query}` : ''}`,
     )
   },
-  listForOrganization: (params: { page?: number; limit?: number; status?: ApplicationStatus } = {}) => {
+  listForOrganization: (
+    params: {
+      opportunityId?: string
+      page?: number
+      limit?: number
+      status?: ApplicationStatus
+    } = {},
+  ) => {
     const query = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) query.set(key, String(value))
@@ -499,11 +506,11 @@ export const organizationAdminApi = {
       registrySource: string
       registryReference: string
       checks: {
-        registryRecordFound: true
-        legalNameAndNumberMatch: true
-        representativeAuthorityConfirmed: true
-        independentlySourcedContactConfirmed: true
-        documentsAppearAuthentic: true
+        registryRecordFound: boolean
+        legalNameAndNumberMatch: boolean
+        representativeAuthorityConfirmed: boolean
+        independentlySourcedContactConfirmed: boolean
+        documentsAppearAuthentic: boolean
       }
       note?: string
     },

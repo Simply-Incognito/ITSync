@@ -18,7 +18,20 @@ const navigation = [
   { to: '/organization/profile', label: 'Profile', icon: Building2 },
 ]
 
-function OrganizationSidebar({ onLogout }: { onLogout: () => void }) {
+function OrganizationSidebar({
+  accountName,
+  onLogout,
+}: {
+  accountName: string
+  onLogout: () => void
+}) {
+  const initials = accountName
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('')
+
   return (
     <div className="flex min-h-full flex-col bg-[#245c49] text-white">
       <div className="px-4 pb-5 pt-6 sm:px-5">
@@ -56,11 +69,11 @@ function OrganizationSidebar({ onLogout }: { onLogout: () => void }) {
       <div className="mt-4 border-t border-white/10 p-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-300 text-xs font-bold text-[#174c39]">
-            O
+            {initials || 'O'}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-xs font-semibold">Organization account</p>
-            <p className="text-[11px] text-emerald-100/70">Representative</p>
+            <p className="truncate text-xs font-semibold">{accountName}</p>
+            <p className="text-[11px] text-emerald-100/70">Organization representative</p>
           </div>
         </div>
         <button
@@ -81,8 +94,9 @@ function OrganizationSidebar({ onLogout }: { onLogout: () => void }) {
 }
 
 export default function OrganizationLayout() {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const accountName = user?.email || 'Organization representative'
 
   const handleLogout = () => {
     logout()
@@ -94,7 +108,7 @@ export default function OrganizationLayout() {
       <div className="mx-auto max-w-[96rem] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 xl:px-8">
         <div className="grid gap-4 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)] xl:gap-6">
           <aside className="hidden overflow-hidden rounded-2xl shadow-sm lg:sticky lg:top-24 lg:block lg:h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
-            <OrganizationSidebar onLogout={handleLogout} />
+            <OrganizationSidebar accountName={accountName} onLogout={handleLogout} />
           </aside>
           <main className="min-w-0 pb-24 lg:pb-0">
             <Outlet />

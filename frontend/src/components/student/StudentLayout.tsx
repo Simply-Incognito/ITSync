@@ -95,7 +95,7 @@ export default function StudentLayout() {
   }
 
   return (
-    <div className="student-layout min-h-[calc(100vh-4rem)] bg-slate-50 sm:min-h-[calc(100vh-4.5rem)]">
+    <div className="workspace-layout min-h-[calc(100vh-4rem)] bg-slate-50 sm:min-h-[calc(100vh-4.5rem)]">
       <div className="grid min-h-[inherit] lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)]">
         <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] self-start overflow-y-auto lg:block sm:top-[4.5rem] sm:h-[calc(100vh-4.5rem)]">
           <StudentSidebar fullName={fullName} onLogout={handleLogout} />

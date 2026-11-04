@@ -45,6 +45,13 @@ npm start
 - `GET /api/v1/openapi.json` returns the OpenAPI document.
 - `GET /api/v1/docs` serves interactive API documentation.
 
+## Service connection retries
+
+The API makes up to five MongoDB startup connection attempts, with an
+exponential backoff starting at 500 ms and capped at 8 seconds. The shared
+`retryWithExponentialBackoff` utility in `src/utils/retry.ts` can also be used
+for connection setup with other external services.
+
 ## Structure
 
 ```text

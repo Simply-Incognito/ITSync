@@ -4,11 +4,14 @@ import Navbar from './Navbar'
 import Footer from './Footer'
 import FeedbackWidget from './FeedbackWidget'
 import AppToaster from './AppToaster'
+import CursorSparkles from './CursorSparkles'
 
 export default function Layout() {
   const { isLoading } = useAuth()
   const { pathname } = useLocation()
-  const isStudentWorkspace = pathname.startsWith('/student/')
+  const isWorkspace = ['/student/', '/organization/', '/admin/'].some((prefix) =>
+    pathname.startsWith(prefix),
+  )
 
   if (isLoading) {
     return (
@@ -24,9 +27,10 @@ export default function Layout() {
       <main className="min-w-0 flex-1">
         <Outlet />
       </main>
-      {!isStudentWorkspace && <Footer />}
+      {!isWorkspace && <Footer />}
       <FeedbackWidget />
       <AppToaster />
+      <CursorSparkles />
     </div>
   )
 }

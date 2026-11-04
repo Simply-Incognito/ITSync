@@ -94,7 +94,15 @@ applicationRouter.get('/organization/me', ...orgAccess, async (request, response
   const status = statusValue as ApplicationStatus | undefined;
   const page = paginationValue(request.query.page, 1, 'page', 100_000);
   const limit = paginationValue(request.query.limit, 20, 'limit', 100);
-  const result = await listApplications({ status, page, limit }, identity.id);
+  const opportunityId =
+    request.query.opportunityId === undefined
+      ? undefined
+      : parseObjectId(
+          typeof request.query.opportunityId === 'string' ? request.query.opportunityId : undefined,
+          'A valid opportunityId is required.',
+          'INVALID_OPPORTUNITY_ID',
+        );
+  const result = await listApplications({ status, opportunityId, page, limit }, identity.id);
 
   response.json({ applications: result.applications, pagination: result.pagination });
 });
@@ -109,7 +117,6 @@ applicationRouter.patch('/:applicationId/status', ...orgAccess, async (request, 
     'Application was not found.',
     'APPLICATION_NOT_FOUND',
   );
-
   const application = await updateApplicationStatus(
     applicationId,
     input.status,

@@ -128,7 +128,11 @@ export interface OrganizationSummary {
   legalName: string
   tradingName?: string | null
   industry?: string
+  description?: string
   website?: string | null
+  representativeName?: string
+  representativeTitle?: string
+  verificationStatus?: OrganizationStatus
   address?: OrganizationAddress
 }
 
@@ -138,7 +142,7 @@ export interface Opportunity {
   createdBy?: string
   title: string
   description: string
-  fieldOfStudy: string
+  fieldOfStudy: string[] | string
   imageKey?: string
   requiredSkills: string[]
   academicRequirements?: string
@@ -146,6 +150,7 @@ export interface Opportunity {
   workArrangement: WorkArrangement
   durationWeeks: number
   availableSlots: number
+  applicationsCount?: number
   applicationDeadline: string
   requiredDocuments: string[]
   additionalRequirements?: string
@@ -159,8 +164,7 @@ export interface Opportunity {
 export interface OpportunityInput {
   title: string
   description: string
-  fieldOfStudy: string
-  imageKey?: string
+  fieldOfStudy: string[]
   requiredSkills?: string[]
   academicRequirements?: string
   location: OpportunityLocation
@@ -192,6 +196,7 @@ export interface StudentSummary {
 export interface Application {
   _id: string
   studentId: string | StudentSummary
+  studentProfile?: StudentProfile | null
   opportunityId: string | Opportunity
   status: ApplicationStatus
   rejectionReason?: string | null

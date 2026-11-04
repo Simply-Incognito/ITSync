@@ -165,6 +165,21 @@ describe('application routes', () => {
     expect(applicationService.listApplications).not.toHaveBeenCalled();
   });
 
+  it('allows an organization to review applications for a specific opportunity', async () => {
+    authenticate.mockResolvedValue(organizationIdentity);
+
+    const response = await request(app)
+      .get('/api/v1/applications/organization/me')
+      .query({ opportunityId, page: '2', limit: '50' })
+      .set('Authorization', 'Bearer test-token');
+
+    expect(response.status).toBe(200);
+    expect(applicationService.listApplications).toHaveBeenCalledWith(
+      { opportunityId: expect.any(Types.ObjectId), page: 2, limit: 50 },
+      organizationIdentity.id,
+    );
+  });
+
   it('rejects invalid application filters and pagination', async () => {
     authenticate.mockResolvedValue(organizationIdentity);
 
@@ -209,6 +224,23 @@ describe('application routes', () => {
       'under_review',
       organizationId,
       'Reviewing candidate',
+    );
+  });
+
+  it('allows an organization representative to accept an application', async () => {
+    authenticate.mockResolvedValue(organizationIdentity);
+
+    const response = await request(app)
+      .patch(`/api/v1/applications/${applicationId}/status`)
+      .set('Authorization', 'Bearer test-token')
+      .send({ status: 'accepted' });
+
+    expect(response.status).toBe(200);
+    expect(applicationService.updateApplicationStatus).toHaveBeenCalledWith(
+      expect.any(Types.ObjectId),
+      'accepted',
+      organizationIdentity.id,
+      undefined,
     );
   });
 

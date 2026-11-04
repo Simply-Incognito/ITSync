@@ -121,7 +121,7 @@ export default function Register() {
       }
 
       notify.success('Account created. Welcome to ITSync!')
-      navigate(role === 'student' ? '/student/dashboard' : '/organization/verification')
+      navigate(role === 'student' ? '/student/dashboard' : '/organization/dashboard')
     } catch (err) {
       notify.error(err instanceof Error ? err.message : 'Registration failed. Please try again.')
     } finally {

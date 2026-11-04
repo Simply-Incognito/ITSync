@@ -3,6 +3,7 @@ import { AppError } from '../../../errors/app-error.js';
 import { Organization } from '../../organizations/models/organization.model.js';
 import { Opportunity, type OpportunityStatus } from '../models/opportunity.model.js';
 import { OpportunityReviewEvent } from '../models/opportunity-review-event.model.js';
+import { chooseOpportunityImageKey } from '../utils/opportunity-images.js';
 import type {
   OpportunityInput,
   OpportunityUpdateInput,
@@ -16,6 +17,8 @@ function parseId(id: string) {
   if (!Types.ObjectId.isValid(id)) throw notFound();
   return new Types.ObjectId(id);
 }
+
+const minimumApplicationWindowMs = 24 * 60 * 60 * 1000;
 
 async function withTransaction<T>(operation: (session: mongoose.ClientSession) => Promise<T>) {
   const session = await mongoose.startSession();
@@ -45,8 +48,16 @@ export async function createOpportunity(
   input: OpportunityInput,
 ) {
   return withTransaction(async (session) => {
+    const organization = await Organization.findById(parseId(organizationId))
+      .select('industry')
+      .session(session);
+    if (!organization) {
+      throw new AppError('Organization was not found.', 404, 'ORGANIZATION_NOT_FOUND');
+    }
+
     const opportunity = new Opportunity({
       ...input,
+      imageKey: chooseOpportunityImageKey(organization.industry),
       organizationId: parseId(organizationId),
       createdBy: parseId(actorUserId),
       status: 'draft',
@@ -255,10 +266,15 @@ async function transitionOpportunity(
         'INVALID_OPPORTUNITY_STATE',
       );
     }
+    let publishedAt: Date | undefined;
     if (toStatus === 'published') {
-      if (opportunity.applicationDeadline <= new Date()) {
+      publishedAt = new Date();
+      if (
+        opportunity.applicationDeadline.getTime() <
+        publishedAt.getTime() + minimumApplicationWindowMs
+      ) {
         throw new AppError(
-          'An opportunity cannot be published after its application deadline.',
+          'The application deadline must be at least 24 hours after publication.',
           409,
           'INVALID_APPLICATION_DEADLINE',
         );
@@ -279,7 +295,7 @@ async function transitionOpportunity(
     const fromStatus = opportunity.status;
     opportunity.status = toStatus;
     opportunity.reviewNote = note;
-    if (toStatus === 'published') opportunity.publishedAt = new Date();
+    if (publishedAt) opportunity.publishedAt = publishedAt;
     await opportunity.save({ session });
     await OpportunityReviewEvent.create(
       [

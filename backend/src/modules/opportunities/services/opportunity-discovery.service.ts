@@ -1,3 +1,4 @@
+import { Application } from '../../applications/models/application.model.js';
 import { Organization } from '../../organizations/models/organization.model.js';
 import { Opportunity } from '../models/opportunity.model.js';
 
@@ -92,9 +93,19 @@ export async function searchOpportunities(
       .lean(),
     Opportunity.countDocuments(query),
   ]);
+  const applicationCounts = await Application.aggregate([
+    { $match: { opportunityId: { $in: opportunities.map((opportunity) => opportunity._id) } } },
+    { $group: { _id: '$opportunityId', count: { $sum: 1 } } },
+  ]);
+  const applicationCountsByOpportunityId = new Map(
+    applicationCounts.map(({ _id, count }) => [String(_id), count]),
+  );
 
   return {
-    opportunities,
+    opportunities: opportunities.map((opportunity) => ({
+      ...opportunity,
+      applicationsCount: applicationCountsByOpportunityId.get(String(opportunity._id)) ?? 0,
+    })),
     pagination: {
       page,
       limit,
