@@ -6,6 +6,7 @@ import type { UserRole } from './types/domain'
 const Layout = lazy(() => import('./components/Layout'))
 const AdminLayout = lazy(() => import('./components/admin/AdminLayout'))
 const StudentLayout = lazy(() => import('./components/student/StudentLayout'))
+const OrganizationLayout = lazy(() => import('./components/organization/OrganizationLayout'))
 const Home = lazy(() => import('./pages/Home'))
 const Login = lazy(() => import('./pages/auth/Login'))
 const Register = lazy(() => import('./pages/auth/Register'))
@@ -65,11 +66,13 @@ export default function App() {
               </Route>
             </Route>
             <Route path="organization" element={<RoleRoute allowedRole="organization_representative" />}>
-              <Route path="dashboard" element={<OrganizationDashboard />} />
-              <Route path="profile" element={<OrganizationProfile />} />
-              <Route path="opportunities" element={<OrganizationOpportunities />} />
-              <Route path="applications" element={<OrganizationApplications />} />
-              <Route path="verification" element={<OrganizationVerification />} />
+              <Route element={<OrganizationLayout />}>
+                <Route path="dashboard" element={<OrganizationDashboard />} />
+                <Route path="profile" element={<OrganizationProfile />} />
+                <Route path="opportunities" element={<OrganizationOpportunities />} />
+                <Route path="applications" element={<OrganizationApplications />} />
+                <Route path="verification" element={<OrganizationVerification />} />
+              </Route>
             </Route>
             <Route path="admin" element={<RoleRoute allowedRole="administrator" />}>
               <Route element={<AdminLayout />}>

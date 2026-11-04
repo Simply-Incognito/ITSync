@@ -4,7 +4,6 @@ import Navbar from './Navbar'
 import Footer from './Footer'
 import FeedbackWidget from './FeedbackWidget'
 import AppToaster from './AppToaster'
-import { StudentNavigationProvider } from './student/StudentNavigationContext'
 
 export default function Layout() {
   const { isLoading } = useAuth()
@@ -20,16 +19,14 @@ export default function Layout() {
   }
 
   return (
-    <StudentNavigationProvider>
-      <div className="min-h-screen flex flex-col bg-slate-50">
-        <Navbar />
-        <main className="min-w-0 flex-1">
-          <Outlet />
-        </main>
-        {!isStudentWorkspace && <Footer />}
-        <FeedbackWidget />
-        <AppToaster />
-      </div>
-    </StudentNavigationProvider>
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <Navbar />
+      <main className="min-w-0 flex-1">
+        <Outlet />
+      </main>
+      {!isStudentWorkspace && <Footer />}
+      <FeedbackWidget />
+      <AppToaster />
+    </div>
   )
 }
