@@ -161,35 +161,41 @@ export async function listApplications(
   // Role-based filtering
   const userRole = await User.findById(userId).select('role').lean();
   if (!userRole) {
-    filter.studentId = studentId;
-    filter.opportunityId = opportunityId;
+    throw new AppError('Application account was not found.', 404, 'ACCOUNT_NOT_FOUND');
   } else if (userRole.role === 'student') {
     // Students can only see their own applications
     filter.studentId = studentId || userId;
+    if (opportunityId) filter.opportunityId = opportunityId;
   } else if (userRole.role === 'organization_representative') {
     // Organization reps see applications for their opportunities
-    if (!opportunityId) {
-      const myOrganizations = await Organization.findOne({
-        representativeUserId: userId,
-      })
-        .select('_id')
-        .lean();
-      if (myOrganizations) {
-        const oppIds = await Opportunity.distinct('_id', {
-          organizationId: myOrganizations._id,
-        });
-        filter.opportunityId = { $in: oppIds };
-      } else {
-        filter.opportunityId = undefined;
-      }
+    const myOrganization = await Organization.findOne({
+      representativeUserId: userId,
+    })
+      .select('_id')
+      .lean();
+    if (!myOrganization) {
+      filter.opportunityId = { $in: [] };
+    } else if (opportunityId) {
+      const ownsOpportunity = await Opportunity.exists({
+        _id: opportunityId,
+        organizationId: myOrganization._id,
+      });
+      filter.opportunityId = ownsOpportunity ? opportunityId : { $in: [] };
+    } else {
+      const opportunityIds = await Opportunity.distinct('_id', {
+        organizationId: myOrganization._id,
+      });
+      filter.opportunityId = { $in: opportunityIds };
     }
-  } else if (userRole.role === 'administrator') {
-    // Administrators see all applications
+  } else {
+    throw new AppError(
+      'Application management is only available to students and organization representatives.',
+      403,
+      'APPLICATION_ACCESS_FORBIDDEN',
+    );
   }
 
   if (status) filter.status = status;
-  if (studentId) filter.studentId = studentId;
-  if (opportunityId) filter.opportunityId = opportunityId;
 
   const skip = (page - 1) * limit;
 
@@ -229,6 +235,28 @@ export async function updateApplicationStatus(
 ): Promise<unknown> {
   const application = await Application.findById(applicationId);
   if (!application) throw new AppError('Application not found.', 404, 'APPLICATION_NOT_FOUND');
+
+  const organization = await Organization.findOne({ representativeUserId: actorUserId })
+    .select('_id')
+    .lean();
+  if (!organization) {
+    throw new AppError(
+      'Only the organization that owns this opportunity can review its applications.',
+      403,
+      'APPLICATION_REVIEW_FORBIDDEN',
+    );
+  }
+  const ownsOpportunity = await Opportunity.exists({
+    _id: application.opportunityId,
+    organizationId: organization._id,
+  });
+  if (!ownsOpportunity) {
+    throw new AppError(
+      'Only the organization that owns this opportunity can review its applications.',
+      403,
+      'APPLICATION_REVIEW_FORBIDDEN',
+    );
+  }
 
   // Define valid transitions
   const validTransitions: Record<ApplicationStatus, ApplicationStatus[]> = {

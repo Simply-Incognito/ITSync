@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, LogOut, Menu, Moon, Sparkles, Sun, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getDashboardPath } from '../utils/navigation'
-import { useStudentNavigation } from './student/StudentNavigationContext'
 
 function getInitialTheme() {
   try {
@@ -19,11 +18,11 @@ export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(getInitialTheme)
-  const { mobileMenuOpen: studentMenuOpen, setMobileMenuOpen: setStudentMenuOpen } = useStudentNavigation()
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const dashboardLink = user ? getDashboardPath(user.role) : '/login'
-  const isStudentWorkspace = pathname.startsWith('/student/')
+  const isWorkspace = ['/student/', '/organization/', '/admin/'].some((prefix) => pathname.startsWith(prefix))
+  const isAuthenticationPage = pathname === '/login' || pathname === '/register'
 
   useEffect(() => {
     document.documentElement.dataset.theme = isDarkMode ? 'dark' : 'light'
@@ -100,28 +99,24 @@ export default function Navbar() {
             {isDarkMode ? <Sun className="h-[18px] w-[18px]" aria-hidden="true" /> : <Moon className="h-[18px] w-[18px]" aria-hidden="true" />}
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (isStudentWorkspace) {
-                setStudentMenuOpen(!studentMenuOpen)
-              } else {
-                setMobileOpen((current) => !current)
-              }
-            }}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-ink-muted transition hover:border-primary-500/50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 lg:hidden"
-            aria-label={(isStudentWorkspace ? studentMenuOpen : mobileOpen) ? 'Close navigation' : 'Open navigation'}
-            aria-expanded={isStudentWorkspace ? studentMenuOpen : mobileOpen}
-            aria-controls={isStudentWorkspace ? 'student-mobile-navigation' : 'mobile-navigation'}
-          >
-            {(isStudentWorkspace ? studentMenuOpen : mobileOpen)
-              ? <X className="h-[18px] w-[18px]" aria-hidden="true" />
-              : <Menu className="h-[18px] w-[18px]" aria-hidden="true" />}
-          </button>
+          {!isWorkspace && !isAuthenticationPage && (
+            <button
+              type="button"
+              onClick={() => setMobileOpen((current) => !current)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-ink-muted transition hover:border-primary-500/50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 lg:hidden"
+              aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-navigation"
+            >
+              {mobileOpen
+                ? <X className="h-[18px] w-[18px]" aria-hidden="true" />
+                : <Menu className="h-[18px] w-[18px]" aria-hidden="true" />}
+            </button>
+          )}
         </div>
       </div>
 
-      {mobileOpen && !isStudentWorkspace && (
+      {mobileOpen && !isWorkspace && !isAuthenticationPage && (
         <nav id="mobile-navigation" aria-label="Mobile navigation" className="border-t border-line bg-surface px-4 py-3 lg:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-1">
             {isAuthenticated ? (

@@ -1,41 +1,53 @@
-import { useEffect, useState } from "react";
-import { Activity as ActivityIcon } from "lucide-react";
-import { administrationApi, type AdminActivityEvent } from "../../services/api";
-import { notify } from "../../lib/notify";
+import { useCallback, useEffect, useState } from 'react'
+import { Activity as ActivityIcon, ArrowLeft, ArrowRight } from 'lucide-react'
+import { administrationApi, type AdminActivityEvent } from '../../services/api'
+import { notify } from '../../lib/notify'
+
+const pageSize = 10
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
 }
 
 export default function AdminActivity() {
-  const [activities, setActivities] = useState<AdminActivityEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<AdminActivityEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
 
-  useEffect(() => {
-    let active = true;
+  const loadActivity = useCallback(() => {
+    let active = true
+    setLoading(true)
     administrationApi
-      .listActivity()
+      .listActivity({ page, limit: pageSize })
       .then((response) => {
-        if (active) setActivities(response.activities);
+        if (active) {
+          setActivities(response.activities)
+          setTotal(response.pagination.total)
+          setTotalPages(Math.max(1, response.pagination.totalPages))
+        }
       })
       .catch((requestError: unknown) => {
         if (active)
           notify.error(
             requestError instanceof Error
               ? requestError.message
-              : "Could not load activity.",
-          );
+              : 'Could not load activity.',
+          )
       })
       .finally(() => {
-        if (active) setLoading(false);
-      });
+        if (active) setLoading(false)
+      })
     return () => {
-      active = false;
-    };
-  }, []);
+      active = false
+    }
+  }, [page])
+
+  useEffect(() => loadActivity(), [loadActivity])
 
   return (
     <div className="space-y-6">
@@ -44,8 +56,7 @@ export default function AdminActivity() {
           Administration activity
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          The latest account, organization, opportunity, and application review
-          actions.
+          Account, organization, opportunity, and application review actions.
         </p>
       </header>
 
@@ -80,10 +91,10 @@ export default function AdminActivity() {
                 {activities.map((log) => (
                   <tr key={log._id}>
                     <td className="px-5 py-4 font-medium text-slate-800">
-                      {log.action.replace(/_/g, " ")}
+                      {log.action.replace(/_/g, ' ')}
                     </td>
                     <td className="px-5 py-4 capitalize text-slate-600">
-                      {log.targetType} ·{" "}
+                      {log.targetType} ·{' '}
                       <span className="font-mono text-xs">{log.targetId}</span>
                     </td>
                     <td className="px-5 py-4 font-mono text-xs text-slate-500">
@@ -104,7 +115,34 @@ export default function AdminActivity() {
             </table>
           </div>
         )}
+        {!loading && (
+          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 sm:px-5">
+            <p className="text-sm text-slate-500">
+              {total.toLocaleString()} total · Page {page} of {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((current) => current - 1)}
+                className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ArrowLeft size={15} aria-hidden="true" />
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => setPage((current) => current + 1)}
+                className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+                <ArrowRight size={15} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div>
-  );
+  )
 }

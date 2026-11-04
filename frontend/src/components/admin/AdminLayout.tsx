@@ -2,12 +2,14 @@ import {
   Activity,
   Building2,
   BriefcaseBusiness,
-  ClipboardList,
   LayoutDashboard,
+  LogOut,
+  ShieldCheck,
   Users,
 } from "lucide-react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import FloatingWorkspaceNav from "../workspace/FloatingWorkspaceNav";
 
 const navigation = [
   { to: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -18,55 +20,106 @@ const navigation = [
     label: "Opportunities",
     icon: BriefcaseBusiness,
   },
-  { to: "/admin/applications", label: "Applications", icon: ClipboardList },
   { to: "/admin/activity", label: "Activity log", icon: Activity },
 ];
 
+type AdminSidebarProps = {
+  onLogout: () => void;
+};
+
+function AdminSidebar({ onLogout }: AdminSidebarProps) {
+  return (
+    <div className="flex min-h-full flex-col bg-[#245c49] text-white">
+      <div className="px-4 pb-5 pt-6 sm:px-5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-300 text-[#174c39]">
+            <ShieldCheck size={21} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold tracking-wide">ITSync</p>
+            <p className="text-[11px] text-emerald-100/75">
+              Admin workspace
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <nav
+        aria-label="Administration"
+        className="flex-1 space-y-2 px-3 lg:pb-4"
+      >
+        {navigation.map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end
+            className={({ isActive }) =>
+              `flex min-h-11 shrink-0 items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition-colors duration-200 ${
+                isActive
+                  ? "bg-emerald-300 text-[#174c39] shadow-md shadow-emerald-950/10"
+                  : "text-white/85 hover:bg-white/10 hover:text-white"
+              }`
+            }
+          >
+            <Icon size={18} aria-hidden="true" />
+            {label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="mt-4 border-t border-white/10 p-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-300 text-xs font-bold text-[#174c39]">
+            A
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold">Admin account</p>
+            <p className="text-[11px] text-emerald-100/70">Administrator</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="mt-4 flex min-h-10 w-full items-center gap-3 rounded-xl px-2 text-left text-xs font-medium text-white/80 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+        >
+          <LogOut size={16} aria-hidden="true" />
+          Sign out
+        </button>
+        <div className="mt-4 flex items-center gap-2 border-t border-white/10 pt-3 text-[10px] text-emerald-100/80">
+          <span
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-300"
+            aria-hidden="true"
+          />
+          <span>System is operational</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminLayout() {
-  const { user } = useAuth();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
-    <div className="min-h-[calc(100vh-9rem)] bg-slate-50">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary-700">
-            Administration
-          </p>
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
-            Platform control center
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">{user?.email}</p>
-        </div>
+    <div className="min-h-[calc(100vh-4rem)] bg-slate-50 sm:min-h-[calc(100vh-4.5rem)]">
+      <div className="mx-auto max-w-[96rem] px-3 py-4 sm:px-5 sm:py-6 lg:px-6 xl:px-8">
+        <div className="grid gap-4 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)] xl:gap-6">
+          <aside className="hidden overflow-hidden rounded-2xl shadow-sm lg:sticky lg:top-24 lg:block lg:h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
+            <AdminSidebar onLogout={handleLogout} />
+          </aside>
 
-        <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <nav
-            aria-label="Administration"
-            className="flex gap-2 overflow-x-auto lg:block lg:space-y-1"
-          >
-            {navigation.map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end
-                className={({ isActive }) =>
-                  `inline-flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition lg:flex ${
-                    isActive
-                      ? "bg-primary-600 text-white shadow-sm"
-                      : "bg-white text-slate-600 hover:bg-primary-50 hover:text-primary-700"
-                  }`
-                }
-              >
-                <Icon size={18} />
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-
-          <main className="min-w-0">
+          <main className="min-w-0 pb-24 lg:pb-0">
             <Outlet />
           </main>
         </div>
       </div>
+      <FloatingWorkspaceNav items={navigation} onLogout={handleLogout} />
     </div>
   );
 }

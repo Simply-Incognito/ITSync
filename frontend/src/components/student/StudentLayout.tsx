@@ -1,8 +1,7 @@
-import { useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Briefcase, FileText, GraduationCap, LayoutDashboard, LogOut, User, X } from 'lucide-react'
+import { Briefcase, FileText, GraduationCap, LayoutDashboard, LogOut, User } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { useStudentNavigation } from './StudentNavigationContext'
+import FloatingWorkspaceNav from '../workspace/FloatingWorkspaceNav'
 
 const navigation = [
   { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -13,11 +12,10 @@ const navigation = [
 
 type StudentSidebarProps = {
   fullName: string
-  onNavigate?: () => void
   onLogout: () => void
 }
 
-function StudentSidebar({ fullName, onNavigate, onLogout }: StudentSidebarProps) {
+function StudentSidebar({ fullName, onLogout }: StudentSidebarProps) {
   const initials = fullName
     .split(/\s+/)
     .filter(Boolean)
@@ -45,7 +43,6 @@ function StudentSidebar({ fullName, onNavigate, onLogout }: StudentSidebarProps)
             key={to}
             to={to}
             end
-            onClick={onNavigate}
             className={({ isActive }) =>
               `flex min-h-12 items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition-colors duration-200 ${
                 isActive
@@ -90,21 +87,10 @@ function StudentSidebar({ fullName, onNavigate, onLogout }: StudentSidebarProps)
 export default function StudentLayout() {
   const { user, studentProfile, logout } = useAuth()
   const navigate = useNavigate()
-  const { mobileMenuOpen, setMobileMenuOpen } = useStudentNavigation()
   const fullName = studentProfile?.fullName || user?.email || 'Student'
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMobileMenuOpen(false)
-    }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [mobileMenuOpen])
 
   const handleLogout = () => {
     logout()
-    setMobileMenuOpen(false)
     navigate('/')
   }
 
@@ -112,45 +98,14 @@ export default function StudentLayout() {
     <div className="student-layout min-h-[calc(100vh-4rem)] bg-slate-50 sm:min-h-[calc(100vh-4.5rem)]">
       <div className="grid min-h-[inherit] lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)]">
         <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] self-start overflow-y-auto lg:block sm:top-[4.5rem] sm:h-[calc(100vh-4.5rem)]">
-            <StudentSidebar fullName={fullName} onLogout={handleLogout} />
-          </aside>
+          <StudentSidebar fullName={fullName} onLogout={handleLogout} />
+        </aside>
 
-          <div className="min-w-0 px-3 py-4 sm:px-5 sm:py-6 lg:px-6 xl:px-8">
-            <Outlet />
-          </div>
-      </div>
-
-      {mobileMenuOpen && (
-        <div className="lg:hidden">
-          <button
-            type="button"
-            className="fixed inset-0 z-[60] bg-slate-950/45"
-            aria-label="Close student navigation"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          <aside
-            id="student-mobile-navigation"
-            aria-label="Student navigation"
-            className="fixed bottom-0 left-0 top-16 z-[70] flex w-72 max-w-[85vw] flex-col overflow-y-auto rounded-r-2xl shadow-2xl"
-          >
-            <div className="flex items-center justify-end bg-[#245c49] px-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
-                aria-label="Close student navigation"
-              >
-                <X size={20} aria-hidden="true" />
-              </button>
-            </div>
-            <StudentSidebar
-              fullName={fullName}
-              onNavigate={() => setMobileMenuOpen(false)}
-              onLogout={handleLogout}
-            />
-          </aside>
+        <div className="min-w-0 px-3 py-4 pb-24 sm:px-5 sm:py-6 sm:pb-24 lg:px-6 lg:pb-6 xl:px-8">
+          <Outlet />
         </div>
-      )}
+      </div>
+      <FloatingWorkspaceNav items={navigation} onLogout={handleLogout} />
     </div>
   )
 }

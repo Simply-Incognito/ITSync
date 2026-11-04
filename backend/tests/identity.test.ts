@@ -57,6 +57,33 @@ describe('identity routes', () => {
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it('requires a matriculation number for student registration', () => {
+    const registration = {
+      email: 'student@example.com',
+      password: 'a-strong-password-123',
+      confirmPassword: 'a-strong-password-123',
+      role: 'student',
+      student: {
+        fullName: 'John Doe',
+        matricNumber: 'ENG/2022/0123',
+      },
+    };
+
+    expect(registerSchema.safeParse(registration).success).toBe(true);
+    expect(
+      registerSchema.safeParse({
+        ...registration,
+        student: { fullName: 'John Doe' },
+      }).success,
+    ).toBe(false);
+    expect(
+      registerSchema.safeParse({
+        ...registration,
+        student: { ...registration.student, matricNumber: '   ' },
+      }).success,
+    ).toBe(false);
+  });
+
   it('requires matching password confirmation when registering any role', async () => {
     const missingConfirmation = await request(app).post('/api/v1/auth/register').send({
       email: 'organization@example.com',

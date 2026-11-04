@@ -641,7 +641,7 @@ export default function StudentProfile() {
       </div>
       <nav
         aria-label="Profile sections"
-        className="profile-section-float fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 z-50 flex w-[80vw] max-w-sm -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-slate-200/70 bg-white/75 px-2 py-2 shadow-lg shadow-slate-900/10 backdrop-blur-xl md:hidden"
+        className="profile-section-float fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-1/2 z-40 flex w-[80vw] max-w-sm -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-slate-200/70 bg-white/75 px-2 py-2 shadow-lg shadow-slate-900/10 backdrop-blur-xl md:hidden"
       >
         {profileSections.map((section) => {
           const Icon = section.icon

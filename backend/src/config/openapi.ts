@@ -179,7 +179,10 @@ export const openApiDocument = {
         tags: ['Administration'],
         security: [{ bearerAuth: [] }],
         responses: {
-          '200': { description: 'Administration statistics.' },
+          '200': {
+            description:
+              'Administration statistics, including daily student, organization, application, and opportunity publishing counts for the last 30 days.',
+          },
           '401': { description: 'Administrator role required.' },
         },
       },
@@ -206,17 +209,6 @@ export const openApiDocument = {
                   details: { type: 'object', description: 'Additional details', default: {} },
                 },
               },
-              '/administration/activity': {
-                get: {
-                  summary: 'Get recent platform administration activity',
-                  tags: ['Administration'],
-                  security: [{ bearerAuth: [] }],
-                  responses: {
-                    '200': { description: 'Recent account and domain review events.' },
-                    '401': { description: 'Administrator role required.' },
-                  },
-                },
-              },
             },
           },
         },
@@ -237,6 +229,26 @@ export const openApiDocument = {
         ],
         responses: {
           '200': { description: 'Administration logs.' },
+          '401': { description: 'Administrator role required.' },
+        },
+      },
+    },
+    '/administration/activity': {
+      get: {
+        summary: 'Get paginated platform administration activity',
+        tags: ['Administration'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', required: false, schema: { type: 'integer', default: 1 } },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+          },
+        ],
+        responses: {
+          '200': { description: 'Activity events with pagination metadata.' },
           '401': { description: 'Administrator role required.' },
         },
       },
@@ -293,70 +305,7 @@ export const openApiDocument = {
         },
       },
     },
-    '/application-tracking/:applicationId': {
-      get: {
-        summary: 'Get application review details and audit history',
-        tags: ['ApplicationTracking'],
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
-        ],
-        responses: {
-          '200': { description: 'Application review details.' },
-          '401': { description: 'Authentication required.' },
-          '403': { description: 'Administrator role required.' },
-          '404': { description: 'Application not found.' },
-        },
-      },
-    },
-    '/application-tracking/:applicationId/history': {
-      get: {
-        summary: 'Get application status history',
-        tags: ['ApplicationTracking'],
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
-        ],
-        responses: {
-          '200': { description: 'Application status history.' },
-          '401': { description: 'Authentication required.' },
-          '403': { description: 'Administrator role required.' },
-          '404': { description: 'Application not found.' },
-        },
-      },
-    },
     '/applications': {
-      get: {
-        summary: 'List applications for administrator review',
-        tags: ['Administration'],
-        security: [{ bearerAuth: [] }],
-        parameters: [
-          {
-            name: 'status',
-            in: 'query',
-            schema: {
-              type: 'string',
-              enum: [
-                'submitted',
-                'under_review',
-                'shortlisted',
-                'interview',
-                'offer',
-                'accepted',
-                'rejected',
-                'withdrawn',
-              ],
-            },
-          },
-          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1 } },
-          { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100 } },
-        ],
-        responses: {
-          '200': { description: 'Paginated applications matching the status filter.' },
-          '400': { description: 'Invalid filter or pagination value.' },
-          '401': { description: 'Administrator role required.' },
-        },
-      },
       post: {
         summary: 'Submit an application for a published opportunity',
         tags: ['Applications'],
@@ -376,6 +325,44 @@ export const openApiDocument = {
                     maxItems: 1,
                     items: { type: 'string' },
                     description: 'One uploaded student ID or biodata document.',
+                  },
+                },
+                '/applications/organization/me': {
+                  get: {
+                    summary: 'List applications for the authenticated organization',
+                    tags: ['Applications'],
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                      {
+                        name: 'status',
+                        in: 'query',
+                        schema: {
+                          type: 'string',
+                          enum: [
+                            'submitted',
+                            'under_review',
+                            'shortlisted',
+                            'interview',
+                            'offer',
+                            'accepted',
+                            'rejected',
+                            'withdrawn',
+                          ],
+                        },
+                      },
+                      { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1 } },
+                      {
+                        name: 'limit',
+                        in: 'query',
+                        schema: { type: 'integer', minimum: 1, maximum: 100 },
+                      },
+                    ],
+                    responses: {
+                      '200': { description: 'Paginated applications for the organization.' },
+                      '400': { description: 'Invalid filter or pagination value.' },
+                      '401': { description: 'Authentication required.' },
+                      '403': { description: 'Organization representative role required.' },
+                    },
                   },
                 },
               },
@@ -400,8 +387,8 @@ export const openApiDocument = {
     },
     '/applications/:applicationId/status': {
       patch: {
-        summary: 'Update application status (admin only)',
-        tags: ['Administration'],
+        summary: 'Update an application status for the authenticated organization',
+        tags: ['Applications'],
         security: [{ bearerAuth: [] }],
         parameters: [
           { name: 'applicationId', in: 'path', required: true, schema: { type: 'string' } },
@@ -436,7 +423,7 @@ export const openApiDocument = {
         responses: {
           '200': { description: 'Application status updated.' },
           '400': { description: 'Invalid status transition.' },
-          '403': { description: 'Administrator role required.' },
+          '403': { description: 'Only the organization that owns the opportunity can review it.' },
           '404': { description: 'Application not found.' },
         },
       },
