@@ -34,12 +34,18 @@ const app = createApp();
 
 const studentId = '68d2c50a8c4e1c843a39a201';
 const adminId = '68d2c50a8c4e1c843a39a204';
+const organizationId = '68d2c50a8c4e1c843a39a208';
 const opportunityId = '68d2c50a8c4e1c843a39a205';
 const applicationId = '68d2c50a8c4e1c843a39a206';
 const studentDocumentId = '68d2c50a8c4e1c843a39a207';
 
 const studentIdentity = { id: studentId, email: 'student@example.test', role: 'student' };
 const adminIdentity = { id: adminId, email: 'admin@example.test', role: 'administrator' };
+const organizationIdentity = {
+  id: organizationId,
+  email: 'organization@example.test',
+  role: 'organization_representative',
+};
 
 describe('application routes', () => {
   beforeEach(() => {
@@ -132,7 +138,22 @@ describe('application routes', () => {
     );
   });
 
-  it('allows an administrator to view all applications', async () => {
+  it('allows an organization to view its applications with filters and pagination', async () => {
+    authenticate.mockResolvedValue(organizationIdentity);
+
+    const response = await request(app)
+      .get('/api/v1/applications/organization/me')
+      .query({ status: 'submitted', page: '2', limit: '5' })
+      .set('Authorization', 'Bearer test-token');
+
+    expect(response.status).toBe(200);
+    expect(applicationService.listApplications).toHaveBeenCalledWith(
+      { status: 'submitted', page: 2, limit: 5 },
+      organizationId,
+    );
+  });
+
+  it('does not expose the application list to administrators', async () => {
     authenticate.mockResolvedValue(adminIdentity);
 
     const response = await request(app)
@@ -140,22 +161,19 @@ describe('application routes', () => {
       .query({ status: 'submitted', page: '2', limit: '5' })
       .set('Authorization', 'Bearer admin-token');
 
-    expect(response.status).toBe(200);
-    expect(applicationService.listApplications).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'submitted', page: 2, limit: 5 }),
-      adminId,
-    );
+    expect(response.status).toBe(404);
+    expect(applicationService.listApplications).not.toHaveBeenCalled();
   });
 
   it('rejects invalid application filters and pagination', async () => {
-    authenticate.mockResolvedValue(adminIdentity);
+    authenticate.mockResolvedValue(organizationIdentity);
 
     const invalidStatus = await request(app)
-      .get('/api/v1/applications')
+      .get('/api/v1/applications/organization/me')
       .query({ status: 'invalid' })
       .set('Authorization', 'Bearer test-token');
     const invalidLimit = await request(app)
-      .get('/api/v1/applications')
+      .get('/api/v1/applications/organization/me')
       .query({ limit: '101' })
       .set('Authorization', 'Bearer test-token');
 
@@ -165,7 +183,7 @@ describe('application routes', () => {
     expect(invalidLimit.body.error.code).toBe('INVALID_PAGINATION');
   });
 
-  it('allows an administrator to update application status', async () => {
+  it('does not allow administrators to update application status', async () => {
     authenticate.mockResolvedValue(adminIdentity);
 
     const response = await request(app)
@@ -173,17 +191,29 @@ describe('application routes', () => {
       .set('Authorization', 'Bearer admin-token')
       .send({ status: 'under_review', reason: 'Reviewing candidate' });
 
+    expect(response.status).toBe(403);
+    expect(applicationService.updateApplicationStatus).not.toHaveBeenCalled();
+  });
+
+  it('allows an organization representative to update application status', async () => {
+    authenticate.mockResolvedValue(organizationIdentity);
+
+    const response = await request(app)
+      .patch(`/api/v1/applications/${applicationId}/status`)
+      .set('Authorization', 'Bearer test-token')
+      .send({ status: 'under_review', reason: 'Reviewing candidate' });
+
     expect(response.status).toBe(200);
     expect(applicationService.updateApplicationStatus).toHaveBeenCalledWith(
       expect.any(Types.ObjectId),
       'under_review',
-      adminId,
+      organizationId,
       'Reviewing candidate',
     );
   });
 
   it('denies invalid status transitions', async () => {
-    authenticate.mockResolvedValue(adminIdentity);
+    authenticate.mockResolvedValue(organizationIdentity);
     applicationService.updateApplicationStatus.mockRejectedValue(
       new AppError(
         'Cannot transition from "accepted" to "under_review".',
