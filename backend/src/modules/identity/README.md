@@ -4,7 +4,7 @@ Owns account registration, login, password recovery, session management, student
 
 ## Routes
 
-- `POST /api/v1/auth/register` creates a student or organization-representative account. Administrator accounts are provisioned outside public registration.
+- `POST /api/v1/auth/register` creates a student or organization-representative account. Student registration requires a full name and matriculation number. Administrator accounts are provisioned outside public registration.
 - `POST /api/v1/auth/login` creates a seven-day bearer session for any active account role, including students and organization representatives.
 - `POST /api/v1/auth/logout` revokes the current bearer session.
 - `GET /api/v1/auth/me` returns the current account and, for students, the student profile.

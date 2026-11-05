@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { notify } from '../../lib/notify'
 import TagInput from '../../components/TagInput'
 import { industryOptions, otherIndustryOption } from '../../constants/industries'
+import { nigerianInstitutions, otherInstitutionOption } from '../../constants/institutions'
 
 export default function Register() {
   const [role, setRole] = useState<'student' | 'organization_representative'>('student')
@@ -16,6 +17,8 @@ export default function Register() {
     fullName: '',
     phoneNumber: '',
     institution: '',
+    customInstitution: '',
+    matricNumber: '',
     department: '',
     fieldOfStudy: '',
     currentLevel: '',
@@ -61,6 +64,14 @@ export default function Register() {
       notify.error('Enter your organization’s industry.')
       return
     }
+    if (
+      role === 'student' &&
+      formData.institution === otherInstitutionOption &&
+      !formData.customInstitution.trim()
+    ) {
+      notify.error('Enter your institution name.')
+      return
+    }
 
     setIsLoading(true)
 
@@ -78,7 +89,12 @@ export default function Register() {
           student: {
             fullName: formData.fullName,
             phoneNumber: formData.phoneNumber || undefined,
-            institution: formData.institution || undefined,
+            institution:
+              (formData.institution === otherInstitutionOption
+                ? formData.customInstitution
+                : formData.institution
+              ).trim() || undefined,
+            matricNumber: formData.matricNumber.trim(),
             department: formData.department || undefined,
             fieldOfStudy: formData.fieldOfStudy || undefined,
             currentLevel: formData.currentLevel || undefined,
@@ -119,7 +135,7 @@ export default function Register() {
       }
 
       notify.success('Account created. Welcome to ITSync!')
-      navigate(role === 'student' ? '/student/dashboard' : '/organization/verification')
+      navigate(role === 'student' ? '/student/dashboard' : '/organization/dashboard')
     } catch (err) {
       notify.error(err instanceof Error ? err.message : 'Registration failed. Please try again.')
     } finally {
@@ -272,17 +288,52 @@ export default function Register() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-ink mb-2">Institution</label>
-                    <input
-                      type="text"
+                    <select
                       name="institution"
                       value={formData.institution}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border border-line rounded-xl bg-surface focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none"
-                      placeholder="University of Lagos"
+                    >
+                      <option value="">Select your institution</option>
+                      {nigerianInstitutions.map((institution) => (
+                        <option key={institution} value={institution}>
+                          {institution}
+                        </option>
+                      ))}
+                      <option value={otherInstitutionOption}>{otherInstitutionOption}</option>
+                    </select>
+                  </div>
+                  {formData.institution === otherInstitutionOption && (
+                    <div>
+                      <label className="block text-sm font-medium text-ink mb-2">Institution name</label>
+                      <input
+                        type="text"
+                        name="customInstitution"
+                        value={formData.customInstitution}
+                        onChange={handleChange}
+                        className="w-full px-4 py-3 border border-line rounded-xl bg-surface focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none"
+                        placeholder="Enter your institution"
+                        required
+                        maxLength={160}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-ink mb-2">Matriculation Number</label>
+                    <input
+                      type="text"
+                      name="matricNumber"
+                      value={formData.matricNumber}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-line rounded-xl bg-surface focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:outline-none"
+                      placeholder="ENG/2022/0123"
+                      autoComplete="off"
+                      required
+                      maxLength={80}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-ink mb-2">Department</label>
+                    <label className="block text-sm font-medium text-ink mb-2">Faculty</label>
                     <input
                       type="text"
                       name="department"
@@ -295,7 +346,7 @@ export default function Register() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-ink mb-2">Field of Study</label>
+                    <label className="block text-sm font-medium text-ink mb-2">Department/Course</label>
                     <input
                       type="text"
                       name="fieldOfStudy"

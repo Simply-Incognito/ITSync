@@ -78,6 +78,13 @@ export type AdminStats = {
   >
   totalOpportunities: number
   publishedOpportunities: number
+  growth: {
+    date: string
+    students: number
+    organizations: number
+    applications: number
+    publishedOpportunities: number
+  }[]
 }
 
 export type AdminLog = {
@@ -100,29 +107,11 @@ export type AdminActivityEvent = {
   createdAt: string
 }
 
-export type AdminApplicationStatus =
-  | 'submitted'
-  | 'under_review'
-  | 'shortlisted'
-  | 'interview'
-  | 'offer'
-  | 'accepted'
-  | 'rejected'
-  | 'withdrawn'
-
-export type AdminApplication = {
-  _id: string
-  status: AdminApplicationStatus
-  studentId: string | { fullName?: string; email?: string; institution?: string }
-  opportunityId: string | { title?: string }
-  createdAt: string
-}
-
 export type AdminOpportunity = {
   _id: string
   title: string
   description?: string
-  fieldOfStudy?: string
+  fieldOfStudy?: string[] | string
   imageKey?: string
   requiredSkills?: string[]
   academicRequirements?: string
@@ -192,6 +181,8 @@ interface ApiErrorResponse {
   }
 }
 
+const requestFailureMessage = "We couldn't complete your request. Please try again later."
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')
   const isFormData = options.body instanceof FormData
@@ -215,12 +206,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   if (!response.ok) {
     if (!isJsonResponse) {
-      // A static host answers writes with 405 and an HTML body, which is the
-      // signature of a missing or wrong VITE_API_URL rather than an API error.
-      throw new Error(
-        `API request to ${endpoint} returned ${response.status} ${response.statusText}. ` +
-          'The request reached the frontend host instead of the API — check VITE_API_URL.',
-      )
+      console.error('[ITSync] API returned a non-JSON error response.', {
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+        contentType,
+      })
+      throw new Error(requestFailureMessage)
     }
 
     const body = (await response.json()) as ApiErrorResponse
@@ -238,10 +230,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   if (!isJsonResponse) {
-    throw new Error(
-      `Expected JSON from ${endpoint} but received "${contentType || 'unknown'}". ` +
-        'VITE_API_URL is probably pointing at the frontend instead of the API.',
-    )
+    console.error('[ITSync] API returned an unexpected response format.', {
+      endpoint,
+      status: response.status,
+      contentType: contentType || 'unknown',
+    })
+    throw new Error(requestFailureMessage)
   }
 
   return response.json()
@@ -387,16 +381,22 @@ export const applicationApi = {
       `/applications/my${query.size ? `?${query}` : ''}`,
     )
   },
-  listAll: (params?: Record<string, string>) => {
-    const query = params ? `?${new URLSearchParams(params).toString()}` : ''
+  listForOrganization: (
+    params: {
+      opportunityId?: string
+      page?: number
+      limit?: number
+      status?: ApplicationStatus
+    } = {},
+  ) => {
+    const query = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) query.set(key, String(value))
+    })
     return request<{ applications: Application[]; pagination: Pagination }>(
-      `/applications${query}`,
+      `/applications/organization/me${query.size ? `?${query}` : ''}`,
     )
   },
-  listForOrganization: () =>
-    request<{ applications: Application[]; pagination: Pagination }>(
-      '/applications/organization/me',
-    ),
   updateStatus: (id: string, data: { status: ApplicationStatus; reason?: string }) =>
     request<{ application: Application }>(`/applications/${id}/status`, {
       method: 'PATCH',
@@ -481,26 +481,16 @@ export const administrationApi = {
     )
   },
   listLogs: () => request<{ logs: AdminLog[] }>('/administration/logs'),
-  listActivity: () => request<{ activities: AdminActivityEvent[] }>('/administration/activity'),
-  listApplications: (params: { page?: number; limit?: number; status?: AdminApplicationStatus } = {}) => {
+  listActivity: (params: { page?: number; limit?: number } = {}) => {
     const query = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) query.set(key, String(value))
     })
     return request<{
-      applications: AdminApplication[]
+      activities: AdminActivityEvent[]
       pagination: AdminPagination
-    }>(`/applications${query.size ? `?${query}` : ''}`)
+    }>(`/administration/activity${query.size ? `?${query}` : ''}`)
   },
-  updateApplicationStatus: (
-    applicationId: string,
-    status: AdminApplicationStatus,
-    reason?: string,
-  ) =>
-    request<{ application: AdminApplication }>(
-      `/applications/${encodeURIComponent(applicationId)}/status`,
-      { method: 'PATCH', body: JSON.stringify({ status, ...(reason ? { reason } : {}) }) },
-    ),
 }
 
 export const organizationAdminApi = {
@@ -516,11 +506,11 @@ export const organizationAdminApi = {
       registrySource: string
       registryReference: string
       checks: {
-        registryRecordFound: true
-        legalNameAndNumberMatch: true
-        representativeAuthorityConfirmed: true
-        independentlySourcedContactConfirmed: true
-        documentsAppearAuthentic: true
+        registryRecordFound: boolean
+        legalNameAndNumberMatch: boolean
+        representativeAuthorityConfirmed: boolean
+        independentlySourcedContactConfirmed: boolean
+        documentsAppearAuthentic: boolean
       }
       note?: string
     },

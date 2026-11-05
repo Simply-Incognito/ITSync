@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { opportunityModel, reviewEventModel, organizationModel } = vi.hoisted(() => ({
     opportunityModel: Object.assign(vi.fn(), { findById: vi.fn() }),
     reviewEventModel: { create: vi.fn() },
-    organizationModel: { findOne: vi.fn() },
+    organizationModel: { findById: vi.fn(), findOne: vi.fn() },
 }));
 
 vi.mock('../src/modules/opportunities/models/opportunity.model.js', () => ({
@@ -61,21 +61,31 @@ describe('opportunity moderation service', () => {
             const input = {
                 title: 'Software Engineering SIWES Placement',
                 description: 'Work with the product engineering team on supervised software projects.',
-                fieldOfStudy: 'Computer Science',
+                fieldOfStudy: ['Computer Science', 'Software Engineering'],
                 requiredSkills: [],
                 academicRequirements: '',
                 location: { city: 'Lagos', state: 'Lagos', country: 'Nigeria' },
                 workArrangement: 'hybrid' as const,
                 durationWeeks: 24,
                 availableSlots: 4,
-                applicationDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                applicationDeadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
                 requiredDocuments: [],
                 additionalRequirements: '',
             };
+            const organizationQuery = {
+                select: vi.fn().mockReturnThis(),
+                session: vi.fn().mockResolvedValue({ industry: 'Information Technology' }),
+            };
+            organizationModel.findById.mockReturnValue(organizationQuery);
 
             const result = await createOpportunity(organizationId, administratorId, input);
 
             expect(result).toBe(opportunity);
+            expect(opportunityModel).toHaveBeenCalledWith(
+                expect.objectContaining({ imageKey: expect.stringMatching(/^technology-/) }),
+            );
+            expect(organizationQuery.select).toHaveBeenCalledWith('industry');
+            expect(organizationQuery.session).toHaveBeenCalledWith(session);
             expect(opportunity.save).toHaveBeenCalledWith({ session });
             const [events, options] = reviewEventModel.create.mock.calls[0] as [
                 Record<string, unknown>[],
@@ -99,7 +109,7 @@ describe('opportunity moderation service', () => {
             _id: opportunityId,
             organizationId,
             status: 'pending_review',
-            applicationDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            applicationDeadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
             publishedAt: null,
             reviewNote: null,
             save: vi.fn().mockResolvedValue(undefined),
@@ -133,12 +143,40 @@ describe('opportunity moderation service', () => {
         expect(session.endSession).toHaveBeenCalledOnce();
     });
 
+    it('allows publication when the deadline is exactly 24 hours away', async () => {
+        const publishedAt = new Date('2026-11-03T00:00:00.000Z');
+        vi.useFakeTimers();
+        vi.setSystemTime(publishedAt);
+        const opportunity = {
+            _id: opportunityId,
+            organizationId,
+            status: 'pending_review',
+            applicationDeadline: new Date(publishedAt.getTime() + 24 * 60 * 60 * 1000),
+            publishedAt: null,
+            reviewNote: null,
+            save: vi.fn().mockResolvedValue(undefined),
+        };
+        opportunityModel.findById.mockReturnValue({
+            session: vi.fn().mockResolvedValue(opportunity),
+        });
+        organizationModel.findOne.mockReturnValue({
+            session: vi.fn().mockResolvedValue({ _id: organizationId }),
+        });
+
+        try {
+            await approveOpportunity(opportunityId, administratorId);
+            expect(opportunity.publishedAt).toEqual(publishedAt);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('refuses publication if the organization is no longer verified', async () => {
         const opportunity = {
             _id: opportunityId,
             organizationId,
             status: 'pending_review',
-            applicationDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            applicationDeadline: new Date(Date.now() + 48 * 60 * 60 * 1000),
             save: vi.fn(),
         };
         opportunityModel.findById.mockReturnValue({
@@ -151,6 +189,29 @@ describe('opportunity moderation service', () => {
             code: 'ORGANIZATION_NOT_VERIFIED',
         });
 
+        expect(opportunity.save).not.toHaveBeenCalled();
+        expect(reviewEventModel.create).not.toHaveBeenCalled();
+        expect(session.endSession).toHaveBeenCalledOnce();
+    });
+
+    it('refuses publication when fewer than 24 hours remain before the deadline', async () => {
+        const opportunity = {
+            _id: opportunityId,
+            organizationId,
+            status: 'pending_review',
+            applicationDeadline: new Date(Date.now() + 23 * 60 * 60 * 1000),
+            save: vi.fn(),
+        };
+        opportunityModel.findById.mockReturnValue({
+            session: vi.fn().mockResolvedValue(opportunity),
+        });
+
+        await expect(approveOpportunity(opportunityId, administratorId)).rejects.toMatchObject({
+            statusCode: 409,
+            code: 'INVALID_APPLICATION_DEADLINE',
+        });
+
+        expect(organizationModel.findOne).not.toHaveBeenCalled();
         expect(opportunity.save).not.toHaveBeenCalled();
         expect(reviewEventModel.create).not.toHaveBeenCalled();
         expect(session.endSession).toHaveBeenCalledOnce();

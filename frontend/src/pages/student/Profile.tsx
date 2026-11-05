@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import TagInput from '../../components/TagInput'
 import { notify } from '../../lib/notify'
 import { studentDocumentApi } from '../../services/api'
+import { nigerianInstitutionOptions, nigerianInstitutions, otherInstitutionOption } from '../../constants/institutions'
 import type { StudentVerificationDocument, StudentVerificationDocumentType } from '../../types/domain'
 
 const profileSections = [
@@ -17,46 +18,6 @@ const profileSections = [
 ] as const
 
 type ProfileSection = (typeof profileSections)[number]['id']
-
-const institutions = [
-  'Abia State University',
-  'Ahmadu Bello University',
-  'Babcock University',
-  'Bayero University Kano',
-  'Benue State University',
-  'Caleb University',
-  'Covenant University',
-  'Delta State University',
-  'Ebonyi State University',
-  'Ekiti State University',
-  'Enugu State University of Science and Technology',
-  'Federal University of Agriculture, Abeokuta',
-  'Federal University of Technology, Akure',
-  'Federal University of Technology, Minna',
-  'Federal University of Technology, Owerri',
-  'Imo State University',
-  'Kwara State University',
-  'Lagos State University',
-  'Landmark University',
-  'Nnamdi Azikiwe University',
-  'Obafemi Awolowo University',
-  'Olabisi Onabanjo University',
-  'Pan-Atlantic University',
-  'Rivers State University',
-  'University of Abuja',
-  'University of Benin',
-  'University of Calabar',
-  'University of Ibadan',
-  'University of Ilorin',
-  'University of Jos',
-  'University of Lagos',
-  'University of Maiduguri',
-  'University of Nigeria, Nsukka',
-  'University of Port Harcourt',
-  'Usmanu Danfodiyo University',
-]
-const otherInstitutionOption = 'Other / not listed'
-const institutionOptions = new Set(institutions)
 
 const inputClassName =
   'w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-4 focus:ring-primary-500/10'
@@ -137,13 +98,13 @@ export default function StudentProfile() {
       setFormData({
         fullName: studentProfile.fullName || '',
         phoneNumber: studentProfile.phoneNumber || '',
-        institution: institutionOptions.has(studentProfile.institution || '')
+        institution: nigerianInstitutionOptions.has(studentProfile.institution || '')
           ? studentProfile.institution || ''
           : studentProfile.institution
             ? otherInstitutionOption
             : '',
         matricNumber: studentProfile.matricNumber || '',
-        customInstitution: institutionOptions.has(studentProfile.institution || '')
+        customInstitution: nigerianInstitutionOptions.has(studentProfile.institution || '')
           ? ''
           : studentProfile.institution || '',
         department: studentProfile.department || '',
@@ -407,7 +368,7 @@ export default function StudentProfile() {
                             name="institution"
                             value={
                               formData.institution === otherInstitutionOption ||
-                              (formData.institution && !institutionOptions.has(formData.institution))
+                              (formData.institution && !nigerianInstitutionOptions.has(formData.institution))
                                 ? otherInstitutionOption
                                 : formData.institution
                             }
@@ -423,7 +384,7 @@ export default function StudentProfile() {
                             className={inputClassName}
                           >
                             <option value="">Select your institution</option>
-                            {institutions.map((institution) => (
+                            {nigerianInstitutions.map((institution) => (
                               <option key={institution} value={institution}>
                                 {institution}
                               </option>
@@ -448,7 +409,7 @@ export default function StudentProfile() {
                           placeholder="Enter your matriculation number"
                         />
                         <ProfileField
-                          label="Department"
+                          label="Faculty"
                           name="department"
                           value={formData.department}
                           onChange={handleChange}
@@ -456,7 +417,7 @@ export default function StudentProfile() {
                         />
                         <div className="grid gap-5 sm:grid-cols-2">
                           <ProfileField
-                            label="Field of study"
+                            label="Department/Course"
                             name="fieldOfStudy"
                             value={formData.fieldOfStudy}
                             onChange={handleChange}
@@ -641,7 +602,7 @@ export default function StudentProfile() {
       </div>
       <nav
         aria-label="Profile sections"
-        className="profile-section-float fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 z-50 flex w-[80vw] max-w-sm -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-slate-200/70 bg-white/75 px-2 py-2 shadow-lg shadow-slate-900/10 backdrop-blur-xl md:hidden"
+        className="profile-section-float fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-1/2 z-40 flex w-[80vw] max-w-sm -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-slate-200/70 bg-white/75 px-2 py-2 shadow-lg shadow-slate-900/10 backdrop-blur-xl md:hidden"
       >
         {profileSections.map((section) => {
           const Icon = section.icon

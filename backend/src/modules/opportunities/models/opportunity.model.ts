@@ -12,13 +12,28 @@ export const opportunityStatuses = [
 export const opportunityImageKeys = [
   'technology-network',
   'technology-code',
+  'technology-team',
   'finance-growth',
+  'finance-market',
+  'finance-analysis',
   'healthcare-care',
+  'healthcare-team',
+  'healthcare-lab',
   'engineering-design',
+  'engineering-build',
+  'engineering-lab',
   'energy-future',
+  'energy-solar',
+  'energy-wind',
   'agriculture-fields',
+  'agriculture-crops',
+  'agriculture-greenhouse',
   'business-collaboration',
+  'business-office',
+  'business-education',
 ] as const;
+
+export type OpportunityImageKey = (typeof opportunityImageKeys)[number];
 
 export type OpportunityStatus = (typeof opportunityStatuses)[number];
 
@@ -33,7 +48,7 @@ const opportunitySchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true, trim: true, maxlength: 160 },
     description: { type: String, required: true, trim: true, maxlength: 10000 },
-    fieldOfStudy: { type: String, required: true, trim: true, maxlength: 160 },
+    fieldOfStudy: [{ type: String, required: true, trim: true, maxlength: 160 }],
     imageKey: { type: String, enum: opportunityImageKeys, default: 'business-collaboration' },
     requiredSkills: [{ type: String, trim: true, maxlength: 100 }],
     academicRequirements: { type: String, trim: true, maxlength: 3000, default: '' },
@@ -44,7 +59,7 @@ const opportunitySchema = new Schema(
     },
     workArrangement: { type: String, enum: ['onsite', 'hybrid', 'remote'], required: true },
     durationWeeks: { type: Number, required: true, min: 1, max: 104 },
-    availableSlots: { type: Number, required: true, min: 1, max: 10000 },
+    availableSlots: { type: Number, required: true, min: 0, max: 10000 },
     applicationDeadline: { type: Date, required: true },
     requiredDocuments: [{ type: String, trim: true, maxlength: 120 }],
     additionalRequirements: { type: String, trim: true, maxlength: 3000, default: '' },

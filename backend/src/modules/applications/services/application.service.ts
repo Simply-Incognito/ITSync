@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { AppError } from '../../../errors/app-error.js';
 import { User } from '../../identity/models/user.model.js';
 import { Student } from '../../identity/models/student.model.js';
@@ -49,9 +49,6 @@ export async function canApplyForOpportunity(
   }).lean();
   if (existingApplication) return false;
 
-  // Check if slots are still available
-  if (opportunity.availableSlots <= 0) return false;
-
   // Check if application deadline hasn't passed
   if (opportunity.applicationDeadline <= new Date()) return false;
 
@@ -75,78 +72,89 @@ export async function createApplication(
   if (!student) throw new AppError('Student profile not found.', 404, 'STUDENT_PROFILE_NOT_FOUND');
   await assertStudentVerificationDocuments(studentDocumentIds, new Types.ObjectId(studentId));
 
-  // Check if opportunity exists and is available
-  const opportunity = await Opportunity.findById(opportunityId).lean();
-  if (!opportunity) throw new AppError('Opportunity not found.', 404, 'OPPORTUNITY_NOT_FOUND');
+  const session = await mongoose.startSession();
+  let application: InstanceType<typeof Application> | undefined;
+  try {
+    await session.withTransaction(async () => {
+      const opportunity = await Opportunity.findById(opportunityId).session(session).lean();
+      if (!opportunity) {
+        throw new AppError('Opportunity not found.', 404, 'OPPORTUNITY_NOT_FOUND');
+      }
 
-  if (opportunity.status !== 'published') {
-    throw new AppError(
-      'Only published opportunities can receive applications.',
-      409,
-      'OPPORTUNITY_NOT_APPLICABLE',
-    );
+      if (opportunity.status !== 'published') {
+        throw new AppError(
+          'Only published opportunities can receive applications.',
+          409,
+          'OPPORTUNITY_NOT_APPLICABLE',
+        );
+      }
+
+      const organization = await Organization.findById(opportunity.organizationId)
+        .session(session)
+        .lean();
+      if (!organization || organization.verificationStatus !== 'verified') {
+        throw new AppError(
+          'Only verified organizations can receive applications.',
+          403,
+          'ORGANIZATION_NOT_VERIFIED',
+        );
+      }
+
+      const existingApplication = await Application.findOne({
+        studentId: student.userId,
+        opportunityId,
+      })
+        .session(session)
+        .lean();
+      if (existingApplication) {
+        throw new AppError(
+          'You have already applied to this opportunity.',
+          409,
+          'DUPLICATE_APPLICATION',
+        );
+      }
+
+      if (opportunity.applicationDeadline <= new Date()) {
+        throw new AppError('The application deadline has passed.', 400, 'APPLICATION_DEADLINE_PASSED');
+      }
+
+      const applicationId = new Types.ObjectId();
+      application = new Application({
+        _id: applicationId,
+        studentId: student.userId,
+        opportunityId,
+        status: 'submitted',
+        documents: studentDocumentIds,
+      });
+      await application.save({ session });
+
+      await ApplicationReviewEvent.create(
+        [
+          {
+            applicationId,
+            studentId: student.userId,
+            action: 'submitted',
+            fromStatus: 'submitted',
+            toStatus: 'submitted',
+          },
+        ],
+        { session },
+      );
+    });
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000) {
+      throw new AppError(
+        'You have already applied to this opportunity.',
+        409,
+        'DUPLICATE_APPLICATION',
+      );
+    }
+    throw error;
+  } finally {
+    await session.endSession();
   }
 
-  // Check verification status of organization
-  const organization = await Organization.findById(opportunity.organizationId).lean();
-  if (!organization || organization.verificationStatus !== 'verified') {
-    throw new AppError(
-      'Only verified organizations can receive applications.',
-      403,
-      'ORGANIZATION_NOT_VERIFIED',
-    );
-  }
-
-  // Check if student already applied
-  const existingApplication = await Application.findOne({
-    studentId: student.userId,
-    opportunityId,
-  }).lean();
-  if (existingApplication) {
-    throw new AppError(
-      'You have already applied to this opportunity.',
-      409,
-      'DUPLICATE_APPLICATION',
-    );
-  }
-
-  // Check if slots are still available
-  if (opportunity.availableSlots <= 0) {
-    throw new AppError('No available slots for this opportunity.', 409, 'NO_AVAILABLE_SLOTS');
-  }
-
-  // Check if application deadline hasn't passed
-  if (opportunity.applicationDeadline <= new Date()) {
-    throw new AppError('The application deadline has passed.', 400, 'APPLICATION_DEADLINE_PASSED');
-  }
-
-  // Create the application
-  const applicationId = new Types.ObjectId();
-  const application = new Application({
-    _id: applicationId,
-    studentId: student.userId,
-    opportunityId,
-    status: 'submitted',
-    documents: studentDocumentIds,
-  });
-
-  await application.save();
-
-  // Reserve a slot atomically so concurrent applications cannot oversubscribe.
-  await Opportunity.updateOne(
-    { _id: opportunityId, availableSlots: { $gt: 0 } },
-    { $inc: { availableSlots: -1 } },
-  );
-
-  // Create review event
-  await ApplicationReviewEvent.create({
-    applicationId,
-    studentId: student.userId,
-    action: 'submitted',
-    fromStatus: 'submitted',
-    toStatus: 'submitted',
-  });
-
+  if (!application) throw new Error('Application transaction completed without creating an application.');
   return application;
 }
 
@@ -161,35 +169,41 @@ export async function listApplications(
   // Role-based filtering
   const userRole = await User.findById(userId).select('role').lean();
   if (!userRole) {
-    filter.studentId = studentId;
-    filter.opportunityId = opportunityId;
+    throw new AppError('Application account was not found.', 404, 'ACCOUNT_NOT_FOUND');
   } else if (userRole.role === 'student') {
     // Students can only see their own applications
     filter.studentId = studentId || userId;
+    if (opportunityId) filter.opportunityId = opportunityId;
   } else if (userRole.role === 'organization_representative') {
     // Organization reps see applications for their opportunities
-    if (!opportunityId) {
-      const myOrganizations = await Organization.findOne({
-        representativeUserId: userId,
-      })
-        .select('_id')
-        .lean();
-      if (myOrganizations) {
-        const oppIds = await Opportunity.distinct('_id', {
-          organizationId: myOrganizations._id,
-        });
-        filter.opportunityId = { $in: oppIds };
-      } else {
-        filter.opportunityId = undefined;
-      }
+    const myOrganization = await Organization.findOne({
+      representativeUserId: userId,
+    })
+      .select('_id')
+      .lean();
+    if (!myOrganization) {
+      filter.opportunityId = { $in: [] };
+    } else if (opportunityId) {
+      const ownsOpportunity = await Opportunity.exists({
+        _id: opportunityId,
+        organizationId: myOrganization._id,
+      });
+      filter.opportunityId = ownsOpportunity ? opportunityId : { $in: [] };
+    } else {
+      const opportunityIds = await Opportunity.distinct('_id', {
+        organizationId: myOrganization._id,
+      });
+      filter.opportunityId = { $in: opportunityIds };
     }
   } else if (userRole.role === 'administrator') {
-    // Administrators see all applications
+    throw new AppError(
+      'Application management is not available to administrators.',
+      403,
+      'APPLICATION_ACCESS_FORBIDDEN',
+    );
   }
 
   if (status) filter.status = status;
-  if (studentId) filter.studentId = studentId;
-  if (opportunityId) filter.opportunityId = opportunityId;
 
   const skip = (page - 1) * limit;
 
@@ -200,7 +214,10 @@ export async function listApplications(
         path: 'opportunityId',
         select:
           'title description fieldOfStudy requiredSkills location workArrangement durationWeeks availableSlots applicationDeadline requiredDocuments status createdAt organizationId academicRequirements additionalRequirements',
-        populate: { path: 'organizationId', select: 'legalName tradingName' },
+        populate: {
+          path: 'organizationId',
+          select: 'legalName tradingName industry description website representativeName representativeTitle address verificationStatus',
+        },
       })
       .populate('documents', 'documentType originalName contentType byteSize')
       .sort({ createdAt: -1 })
@@ -210,8 +227,28 @@ export async function listApplications(
     Application.countDocuments(filter),
   ]);
 
+  const studentUserIds = applications
+    .map((application) => {
+      const student = application.studentId as { _id?: Types.ObjectId } | null;
+      return student?._id;
+    })
+    .filter((id): id is Types.ObjectId => Boolean(id));
+  const studentProfiles = await Student.find({ userId: { $in: studentUserIds } }).lean();
+  const profilesByUserId = new Map(
+    studentProfiles.map((profile) => [String(profile.userId), profile]),
+  );
+  const applicationsWithProfiles = applications.map((application) => {
+    const student = application.studentId as { _id?: Types.ObjectId } | null;
+    return {
+      ...application,
+      studentProfile: student?._id
+        ? profilesByUserId.get(String(student._id)) ?? null
+        : null,
+    };
+  });
+
   return {
-    applications,
+    applications: applicationsWithProfiles,
     pagination: {
       page,
       limit,
@@ -230,6 +267,28 @@ export async function updateApplicationStatus(
   const application = await Application.findById(applicationId);
   if (!application) throw new AppError('Application not found.', 404, 'APPLICATION_NOT_FOUND');
 
+  const organization = await Organization.findOne({ representativeUserId: actorUserId })
+    .select('_id')
+    .lean();
+  if (!organization) {
+    throw new AppError(
+      'Only the organization that owns this opportunity can review its applications.',
+      403,
+      'APPLICATION_REVIEW_FORBIDDEN',
+    );
+  }
+  const ownsOpportunity = await Opportunity.exists({
+    _id: application.opportunityId,
+    organizationId: organization._id,
+  });
+  if (!ownsOpportunity) {
+    throw new AppError(
+      'Only the organization that owns this opportunity can review its applications.',
+      403,
+      'APPLICATION_REVIEW_FORBIDDEN',
+    );
+  }
+
   // Define valid transitions
   const validTransitions: Record<ApplicationStatus, ApplicationStatus[]> = {
     submitted: ['under_review', 'rejected', 'withdrawn'],
@@ -243,7 +302,10 @@ export async function updateApplicationStatus(
   };
 
   const currentStatus = application.status as ApplicationStatus;
-  if (!validTransitions[currentStatus]?.includes(newStatus)) {
+  const organizationDecision =
+    (newStatus === 'accepted' || newStatus === 'rejected') &&
+    !['accepted', 'rejected', 'withdrawn'].includes(currentStatus);
+  if (!organizationDecision && !validTransitions[currentStatus]?.includes(newStatus)) {
     throw new AppError(
       `Cannot transition from "${currentStatus}" to "${newStatus}".`,
       409,

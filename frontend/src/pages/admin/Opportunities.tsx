@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BriefcaseBusiness, MapPin } from "lucide-react";
 import { opportunityAdminApi, type AdminOpportunity } from "../../services/api";
+import { getOpportunityFields } from "../../utils/opportunity-fields";
 import { notify } from "../../lib/notify";
 
 const statuses: AdminOpportunity["status"][] = [
@@ -173,7 +174,9 @@ export default function AdminOpportunities() {
                 </p>
               )}
               <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-                {opportunity.fieldOfStudy && <p><strong>Field of study:</strong> {opportunity.fieldOfStudy}</p>}
+                {opportunity.fieldOfStudy && (
+                  <p><strong>Field of study:</strong> {getOpportunityFields(opportunity.fieldOfStudy).join(", ")}</p>
+                )}
                 {opportunity.workArrangement && <p><strong>Work arrangement:</strong> {opportunity.workArrangement}</p>}
                 {opportunity.durationWeeks && <p><strong>Duration:</strong> {opportunity.durationWeeks} weeks</p>}
                 {opportunity.availableSlots !== undefined && <p><strong>Available slots:</strong> {opportunity.availableSlots}</p>}

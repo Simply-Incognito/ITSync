@@ -38,7 +38,10 @@ administrationRouter.get('/users', ...adminAccess, async (request, response) => 
   const search = typeof request.query.search === 'string' ? request.query.search : undefined;
 
   const filters: UserManagementFilter = {};
-  if (typeof request.query.role === 'string' && userRoles.includes(request.query.role as UserRole)) {
+  if (
+    typeof request.query.role === 'string' &&
+    userRoles.includes(request.query.role as UserRole)
+  ) {
     filters.role = request.query.role as UserRole;
   }
   if (request.query.status === 'active' || request.query.status === 'suspended') {
@@ -124,13 +127,24 @@ administrationRouter.get('/logs', ...adminAccess, async (request, response) => {
   response.json({ logs });
 });
 
-administrationRouter.get('/activity', ...adminAccess, async (_request, response) => {
-  const [logs, organizationReviews, opportunityReviews, applicationReviews] = await Promise.all([
-    AdministrationLog.find({}).sort({ createdAt: -1 }).limit(100).lean(),
-    OrganizationReviewEvent.find({}).sort({ createdAt: -1 }).limit(100).lean(),
-    OpportunityReviewEvent.find({}).sort({ createdAt: -1 }).limit(100).lean(),
-    ApplicationReviewEvent.find({}).sort({ createdAt: -1 }).limit(100).lean(),
-  ]);
+administrationRouter.get('/activity', ...adminAccess, async (request, response) => {
+  const { page, limit } = pagination(request.query);
+  const skip = (page - 1) * limit;
+  const fetchLimit = skip + limit;
+  const sort = { createdAt: -1 as const, _id: -1 as const };
+  const [logs, organizationReviews, opportunityReviews, applicationReviews, counts] =
+    await Promise.all([
+      AdministrationLog.find({}).sort(sort).limit(fetchLimit).lean(),
+      OrganizationReviewEvent.find({}).sort(sort).limit(fetchLimit).lean(),
+      OpportunityReviewEvent.find({}).sort(sort).limit(fetchLimit).lean(),
+      ApplicationReviewEvent.find({}).sort(sort).limit(fetchLimit).lean(),
+      Promise.all([
+        AdministrationLog.countDocuments({}),
+        OrganizationReviewEvent.countDocuments({}),
+        OpportunityReviewEvent.countDocuments({}),
+        ApplicationReviewEvent.countDocuments({}),
+      ]),
+    ]);
 
   const activities = [
     ...logs.map((event) => ({
@@ -184,10 +198,17 @@ administrationRouter.get('/activity', ...adminAccess, async (_request, response)
       createdAt: event.createdAt,
     })),
   ]
-    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
-    .slice(0, 100);
+    .sort(
+      (left, right) =>
+        right.createdAt.getTime() - left.createdAt.getTime() || right._id.localeCompare(left._id),
+    )
+    .slice(skip, skip + limit);
 
-  response.json({ activities });
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  response.json({
+    activities,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
 });
 
 administrationRouter.patch('/users/:userId/status', ...adminAccess, async (request, response) => {

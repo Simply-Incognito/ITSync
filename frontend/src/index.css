@@ -148,6 +148,44 @@ button:disabled {
   color: #174a33;
 }
 
+.cursor-sparkles {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cursor-sparkle {
+  position: absolute;
+  display: block;
+  background: linear-gradient(135deg, #83e5ae, #d6bd75);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  opacity: 0;
+  animation: cursor-sparkle 650ms ease-out forwards;
+}
+
+@keyframes cursor-sparkle {
+  0% {
+    opacity: 0;
+    transform: scale(0.2) rotate(var(--sparkle-rotation));
+  }
+  35% {
+    opacity: 0.75;
+    transform: scale(1) rotate(calc(var(--sparkle-rotation) + 35deg));
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(calc(var(--sparkle-rotation) + 80deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-sparkles {
+    display: none;
+  }
+}
+
 *:focus-visible {
   outline: 3px solid rgba(41, 185, 112, 0.42);
   outline-offset: 3px;
@@ -412,7 +450,7 @@ html[data-theme="dark"] body {
   color: var(--text);
 }
 
-html[data-theme="dark"] .student-layout {
+html[data-theme="dark"] .workspace-layout {
   background-color: #111a14;
 }
 

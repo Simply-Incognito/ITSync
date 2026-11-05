@@ -1,6 +1,5 @@
 import { AppError } from '../../../errors/app-error.js';
 import { Application } from '../../applications/models/application.model.js';
-import { ApplicationReviewEvent } from '../../applications/models/application-review-event.model.js';
 import { Opportunity } from '../../opportunities/models/opportunity.model.js';
 import { Organization } from '../../organizations/models/organization.model.js';
 
@@ -103,28 +102,4 @@ export async function getOrganizationDashboard(
     recentApplications,
     availableSlots,
   };
-}
-
-export async function getApplicationReview(applicationId: string): Promise<{
-  application: unknown;
-  events: unknown[];
-}> {
-  const application = await Application.findById(applicationId)
-    .populate('studentId', 'fullName email institution')
-    .populate('opportunityId', 'title organizationId')
-    .lean();
-
-  if (!application) throw new AppError('Application not found.', 404, 'APPLICATION_NOT_FOUND');
-
-  const events = await ApplicationReviewEvent.find({ applicationId })
-    .sort({ createdAt: -1 })
-    .lean();
-
-  return { application, events };
-}
-
-export async function getApplicationStatusHistory(applicationId: string): Promise<unknown[]> {
-  const events = await ApplicationReviewEvent.find({ applicationId }).sort({ createdAt: 1 }).lean();
-
-  return events;
 }
